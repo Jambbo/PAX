@@ -5,7 +5,10 @@ import jakarta.validation.constraints.Email;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -41,6 +44,15 @@ public class User {
     @Enumerated(EnumType.STRING)
     UserStatus status;
 
+    @ColumnDefault("false")
+    boolean isProfilePrivate;
+
+    @CreationTimestamp
+    LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    LocalDateTime updatedAt;
+
     @OneToMany
     @JoinTable(
             name = "users_posts",
@@ -63,8 +75,8 @@ public class User {
     )
     Set<User> friends = new HashSet<>();
 
-    @ColumnDefault("false")
-    boolean isProfilePrivate;
+
+
 
 
 }

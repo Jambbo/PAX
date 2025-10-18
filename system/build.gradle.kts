@@ -41,9 +41,12 @@ dependencies {
     implementation("org.postgresql:postgresql:${versions["postgresqlVersion"]}")
     implementation("org.liquibase:liquibase-core:${versions["liquibaseVersion"]}")
     implementation("net.lbruun.springboot:preliquibase-spring-boot-starter:${versions["preLiquibaseVersion"]}")
-
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
+    implementation("org.mapstruct:mapstruct:1.5.5.Final")
+    annotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
+
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -51,4 +54,7 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+tasks.withType<JavaCompile> {
+    options.annotationProcessorPath = configurations.annotationProcessor.get()
 }
