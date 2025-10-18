@@ -3,13 +3,12 @@ package com.example.system.rest.dto.user;
 import com.example.system.domain.model.UserStatus;
 import com.example.system.rest.validation.OnCreate;
 import com.example.system.rest.validation.OnUpdate;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.*;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.validator.constraints.Length;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 
 import java.time.LocalDateTime;
 
@@ -62,7 +61,7 @@ public class UserDto {
 
     UserStatus status;
 
-    Boolean isProfilePrivate;
+    boolean isProfilePrivate;
 
     @Null(message = "createdAt is server-managed.", groups = {OnCreate.class, OnUpdate.class})
     LocalDateTime createdAt;
