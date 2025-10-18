@@ -49,7 +49,7 @@ public class GroupDto {
     @Null(message = "createdAt must be null.", groups = {OnCreate.class, OnUpdate.class})
     String createdAt;
 
-    @Null(message = "updatedAt is server-managed.", groups = {OnCreate.class, OnUpdate.class})
+    @Null(message = "updatedAt must be null.", groups = {OnCreate.class, OnUpdate.class})
     String updatedAt;
 
 }
