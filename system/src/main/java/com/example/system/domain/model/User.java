@@ -75,6 +75,11 @@ public class User {
     )
     Set<User> friends = new HashSet<>();
 
+    @Column(name = "role")
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "users_roles")
+    @Enumerated(value = EnumType.STRING)
+    Set<Role> roles = new HashSet<>();
 
 
 

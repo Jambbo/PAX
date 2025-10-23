@@ -9,6 +9,7 @@ import org.mapstruct.Mappings;
 @Mapper(componentModel = "spring")
 public interface UserMapper extends Mappable<User, UserDto> {
 
+//TODO figure out if I need those mappings
 
 //    @Mapping(target = "id", source = "id")
 //    @Mapping(target = "username", source = "username")
@@ -27,7 +28,7 @@ public interface UserMapper extends Mappable<User, UserDto> {
 //    @Mapping(target = "groups", ignore = true)
 //    @Mapping(target = "ownedGroups", ignore = true)
 //    @Mapping(target = "friends", ignore = true)
-    User fromDto(UserDto dto);
+//    User fromDto(UserDto dto);
 
 //    @Mappings({
 //            @Mapping(target = "id", source = "id"),
@@ -46,6 +47,6 @@ public interface UserMapper extends Mappable<User, UserDto> {
 //            @Mapping(target = "createdAt", source = "createdAt"),
 //            @Mapping(target = "updatedAt", source = "updatedAt")
 //    })
-    UserDto toDto(User entity);
+//    UserDto toDto(User entity);
 
 }

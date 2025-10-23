@@ -12,4 +12,10 @@ public interface UserService {
     User update(User user);
 
     User register(User user);
+
+    User getByUsername(String username);
+
+    boolean existsByUsername(String username);
+
+    User create(User user);
 }

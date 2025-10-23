@@ -34,4 +34,20 @@ public class UserServiceImpl implements UserService {
     public User register(User user) {
         return userRepository.save(user);
     }
+
+    @Override
+    public User getByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(RuntimeException::new);//TODO create ResourceNotFoundException
+    }
+
+    @Override
+    public boolean existsByUsername(String username) {
+        return userRepository.existsByUsername(username);
+    }
+
+    @Override
+    public User create(User user) {
+        return userRepository.save(user);
+    }
 }

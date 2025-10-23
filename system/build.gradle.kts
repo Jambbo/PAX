@@ -36,8 +36,12 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-security:3.5.6")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("javax.annotation:javax.annotation-api:${versions["javaxAnnotationApiVersion"]}")
+    implementation("io.jsonwebtoken:jjwt-api:0.13.0")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.13.0")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0")
     implementation("org.postgresql:postgresql:${versions["postgresqlVersion"]}")
     implementation("org.liquibase:liquibase-core:${versions["liquibaseVersion"]}")
     implementation("net.lbruun.springboot:preliquibase-spring-boot-starter:${versions["preLiquibaseVersion"]}")
