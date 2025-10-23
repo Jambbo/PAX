@@ -1,4 +1,4 @@
-CREATE TABLE users
+CREATE TABLE IF NOT EXISTS users
 (
     id                  BIGSERIAL PRIMARY KEY,
     username            VARCHAR(50)  NOT NULL UNIQUE,
@@ -15,7 +15,7 @@ CREATE TABLE users
     is_profile_private  BOOLEAN   DEFAULT FALSE
 );
 
-CREATE TABLE groups
+CREATE TABLE IF NOT EXISTS groups
 (
     id           BIGSERIAL PRIMARY KEY,
     name         VARCHAR(255) NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE groups
     CONSTRAINT fk_groups_users FOREIGN KEY (owner_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
-CREATE TABLE posts
+CREATE TABLE IF NOT EXISTS posts
 (
     id         BIGSERIAL PRIMARY KEY,
     text       VARCHAR(2000),
@@ -49,7 +49,7 @@ CREATE TABLE posts
 
 
 -- element collection
-CREATE TABLE posts_images
+CREATE TABLE IF NOT EXISTS posts_images
 (
     post_id BIGINT       NOT NULL,
     image   VARCHAR(500) NOT NULL,
@@ -59,7 +59,7 @@ CREATE TABLE posts_images
 
 
 --manytomany
-CREATE TABLE group_members
+CREATE TABLE IF NOT EXISTS group_members
 (
     group_id BIGINT NOT NULL,
     user_id  BIGINT NOT NULL,
@@ -69,7 +69,7 @@ CREATE TABLE group_members
 );
 
 --manytomany
-CREATE TABLE group_admins
+CREATE TABLE IF NOT EXISTS group_admins
 (
     group_id BIGINT NOT NULL,
     user_id  BIGINT NOT NULL,
@@ -79,10 +79,18 @@ CREATE TABLE group_admins
 );
 
 --manytomany
-CREATE TABLE user_friends
+CREATE TABLE IF NOT EXISTS user_friends
 (
     user_id   BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     friend_id BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     PRIMARY KEY (user_id, friend_id),
     CONSTRAINT user_not_self CHECK (user_id <> friend_id)
+);
+
+CREATE TABLE IF NOT EXISTS users_roles
+(
+    user_id BIGINT       NOT NULL,
+    role    VARCHAR(255) NOT NULL,
+    PRIMARY KEY (user_id, role),
+    CONSTRAINT fk_users_roles_users FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE NO ACTION
 );
