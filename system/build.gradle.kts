@@ -69,7 +69,7 @@ tasks.withType<JavaCompile> {
 // === CHECKSTYLE ===
 checkstyle {
     toolVersion = "10.17.0"
-    configFile = file("system/checkstyle-suppressions.xml")
+    configFile = file("checkstyle.xml")
     isIgnoreFailures = false // fails build on violation (like failsOnError = true)
     isShowViolations = true  // prints logs to console
 }
