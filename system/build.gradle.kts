@@ -12,10 +12,13 @@ plugins {
     java
     id("org.springframework.boot") version "3.5.6"
     id("io.spring.dependency-management") version "1.1.7"
+    id("checkstyle")
+    jacoco
 }
 
+
 group = "com.example"
-version = "0.0.1-SNAPSHOT"
+version = "1.0.0"
 description = "system"
 
 java {
@@ -36,7 +39,7 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-security:3.5.6")
+    implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("javax.annotation:javax.annotation-api:${versions["javaxAnnotationApiVersion"]}")
     implementation("io.jsonwebtoken:jjwt-api:0.13.0")
@@ -56,9 +59,65 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 }
 
-tasks.withType<Test> {
-    useJUnitPlatform()
-}
 tasks.withType<JavaCompile> {
     options.annotationProcessorPath = configurations.annotationProcessor.get()
+}
+
+
+
+
+// === CHECKSTYLE ===
+checkstyle {
+    toolVersion = "10.17.0"
+    configFile = file("config/checkstyle/sun_checks.xml") // or google_checks.xml if preferred
+    configProperties["suppressionsFile"] = file("config/checkstyle/checkstyle-suppressions.xml")
+    isIgnoreFailures = false // fails build on violation (like failsOnError = true)
+    isShowViolations = true  // prints logs to console
+}
+
+tasks.withType<Checkstyle> {
+    reports {
+        xml.required.set(false)
+        html.required.set(true)
+        html.outputLocation.set(layout.buildDirectory.file("reports/checkstyle/${name}.html"))
+    }
+}
+
+
+// === JACOCO CONFIG ===
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+tasks.test {
+    useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport) // Generate report after tests
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.test)
+    violationRules {
+        rule {
+            element = "PACKAGE"
+            includes = listOf("com.example.system.service")
+            limit {
+                counter = "INSTRUCTION"
+                value = "COVEREDRATIO"
+                minimum = "0.00".toBigDecimal() //TODO change coverage when tests are written
+            }
+        }
+    }
+}
+
+// Fail the build if coverage is below the threshold
+tasks.check {
+    dependsOn(tasks.jacocoTestCoverageVerification)
 }
