@@ -69,10 +69,10 @@ tasks.withType<JavaCompile> {
 // === CHECKSTYLE ===
 checkstyle {
     toolVersion = "10.17.0"
-    configFile = file("config/checkstyle/sun_checks.xml") // or google_checks.xml if preferred
-    configProperties["suppressionsFile"] = file("config/checkstyle/checkstyle-suppressions.xml")
-    isIgnoreFailures = false // fails build on violation (like failsOnError = true)
-    isShowViolations = true  // prints logs to console
+    configFile = file("config/checkstyle/checkstyle.xml")
+    configDirectory.set(file("config/checkstyle"))
+    isIgnoreFailures = false
+    isShowViolations = true
 }
 
 tasks.withType<Checkstyle> {
@@ -86,7 +86,7 @@ tasks.withType<Checkstyle> {
 
 // === JACOCO CONFIG ===
 jacoco {
-    toolVersion = "0.8.12"
+    toolVersion = "0.8.14"
 }
 
 tasks.test {
@@ -107,11 +107,11 @@ tasks.jacocoTestCoverageVerification {
     violationRules {
         rule {
             element = "PACKAGE"
-            includes = listOf("com.example.system.service")
+            includes = listOf("com.example.system.service.*")
             limit {
                 counter = "INSTRUCTION"
                 value = "COVEREDRATIO"
-                minimum = "0.00".toBigDecimal() //TODO change coverage when tests are written
+                minimum = "0.00".toBigDecimal() //TODO change coverage minimum when tests are implemented
             }
         }
     }
