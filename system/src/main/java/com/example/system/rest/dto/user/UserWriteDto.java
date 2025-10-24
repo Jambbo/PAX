@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 
 @Data
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UserDto {
+public class UserWriteDto {
 
     @Null(message = "id must be null.", groups = OnCreate.class)
     @NotNull(message = "id must be provided for update.", groups = OnUpdate.class)

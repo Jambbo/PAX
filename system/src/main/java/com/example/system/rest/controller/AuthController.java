@@ -4,7 +4,7 @@ import com.example.system.domain.model.User;
 import com.example.system.rest.dto.auth.LoginRequestDto;
 import com.example.system.rest.dto.auth.LoginResponseDto;
 import com.example.system.rest.dto.mapper.UserMapper;
-import com.example.system.rest.dto.user.UserDto;
+import com.example.system.rest.dto.user.UserWriteDto;
 import com.example.system.rest.validation.OnCreate;
 import com.example.system.service.auth.AuthService;
 import lombok.RequiredArgsConstructor;
@@ -25,9 +25,9 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(
-            @RequestBody @Validated(OnCreate.class) final UserDto userDto
+            @RequestBody @Validated(OnCreate.class) final UserWriteDto userWriteDto
     ) {
-        User user = userMapper.fromDto(userDto);
+        User user = userMapper.toEntity(userWriteDto);
         return ResponseEntity.ok(userMapper.toDto(authService.register(user)));
     }
 
