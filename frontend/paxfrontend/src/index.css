@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* optional global layout rule */
+#root {
+  min-height: 100vh;
+}
