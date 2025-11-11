@@ -224,6 +224,7 @@ export const SettingsPage: React.FC = () => {
         </div>
     );
 
+    const [selectedTheme, setTheme] = useState('dark');
     const renderAppearanceTab = () => (
         <div className="space-y-6">
             <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-6">
@@ -232,15 +233,20 @@ export const SettingsPage: React.FC = () => {
                     {['Dark', 'Light', 'Auto'].map((theme) => (
                         <button
                             key={theme}
+                            onClick={()=>setTheme(theme)}
                             className={`p-4 rounded-lg border-2 transition-all ${
-                                theme === 'Dark'
+                                selectedTheme === theme
                                     ? 'border-purple-600 bg-purple-600/10'
                                     : 'border-gray-700 hover:border-gray-600'
                             }`}
                         >
                             <div className="flex items-center justify-center mb-2">
                                 <div className={`w-16 h-16 rounded-lg ${
-                                    theme === 'Dark' ? 'bg-gray-900' : theme === 'Light' ? 'bg-gray-100' : 'bg-gradient-to-br from-gray-900 to-gray-100'
+                                    theme === 'Dark' 
+                                        ? 'bg-gray-900' 
+                                        : theme === 'Light' 
+                                            ? 'bg-gray-100' 
+                                            : 'bg-gradient-to-br from-gray-900 to-gray-100'
                                 }`} />
                             </div>
                             <p className="text-white font-medium text-center">{theme}</p>
