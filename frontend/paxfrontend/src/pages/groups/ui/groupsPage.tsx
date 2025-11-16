@@ -360,13 +360,13 @@ export const GroupsPage: React.FC = () => {
                             {/* Avatar */}
                             <div className="flex items-start justify-between mb-3 -mt-12">
                                 <div
-                                    className={`w-20 h-20 bg-gradient-to-r ${community.banner} rounded-xl flex items-center justify-center font-bold text-white text-2xl border-4 border-gray-800`}
+                                    className={`z-50 w-20 h-20 bg-gradient-to-r ${community.banner} rounded-xl flex items-center justify-center font-bold text-white text-2xl border-4 border-gray-800`}
                                 >
                                     {community.avatar}
                                 </div>
                                 <button
                                     onClick={() => toggleJoin(community.id)}
-                                    className={`px-4 py-2 rounded-lg transition-all font-medium flex items-center gap-2 ${
+                                    className={`z-50 px-4 py-2 rounded-lg transition-all font-medium flex items-center gap-2 ${
                                         community.isJoined
                                             ? 'bg-gray-700/50 text-white hover:bg-gray-700'
                                             : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-500/20'
