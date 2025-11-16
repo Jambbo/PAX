@@ -1,7 +1,24 @@
 import React, { useState } from 'react';
-import { Users, Search, Plus, TrendingUp, Lock, Globe, Star, MessageSquare, Eye, UserPlus, Check, Crown, Shield } from 'lucide-react';
-import {categories, Community} from "../index";
-
+import {
+    Users,
+    Search,
+    Plus,
+    TrendingUp,
+    Lock,
+    Globe,
+    Star,
+    MessageSquare,
+    Eye,
+    UserPlus,
+    Check,
+    Crown,
+    Shield
+} from 'lucide-react';
+import { categories, Community } from "../index";
+import {
+    CreateCommunityModal,
+    CreateCommunityFormData
+} from "../createCommunity";
 
 export const GroupsPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'discover' | 'joined' | 'popular'>('discover');
@@ -121,26 +138,68 @@ export const GroupsPage: React.FC = () => {
         }
     ]);
 
-
-
     const [selectedCategory, setSelectedCategory] = useState("All Categories");
+
+    // ===== СТЕЙТ ДЛЯ МОДАЛКИ СТВОРЕННЯ КОМ'ЮНІТІ =====
+    const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [serverError, setServerError] = useState<string | null>(null);
+
+    const openCreateModal = () => {
+        setServerError(null);
+        setIsCreateOpen(true);
+    };
+
+    const closeCreateModal = () => {
+        if (isSubmitting) return; // не даємо закрити, поки "створюємо"
+        setIsCreateOpen(false);
+        setServerError(null);
+    };
+
+    const handleCreateCommunity = async (data: CreateCommunityFormData) => {
+        setIsSubmitting(true);
+        setServerError(null);
+
+        try {
+            // МНЕ ЧАТИК СКАЗАЛ ТУТ ТЕБЕ НАДО БУДЕТ ЗАПРОС НА БЕКЭНД ДЕЛАТЬ
+            console.log("Create community payload (to send to backend later):", data);
+
+            setIsCreateOpen(false);
+
+            // Хз не работает хуйня
+            // setCommunities(prev => [...prev, { ... }]);
+        } catch (err) {
+            setServerError("Failed to create community. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    // =================================================
 
     const toggleJoin = (communityId: number) => {
         setCommunities(communities.map(community =>
             community.id === communityId
-                ? { ...community, isJoined: !community.isJoined, members: community.isJoined ? community.members - 1 : community.members + 1 }
+                ? {
+                    ...community,
+                    isJoined: !community.isJoined,
+                    members: community.isJoined ? community.members - 1 : community.members + 1
+                }
                 : community
         ));
     };
 
     const filteredCommunities = communities.filter(community => {
-        const matchesSearch = community.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        const matchesSearch =
+            community.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             community.description.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesCategory = selectedCategory === "All Categories" || community.category === selectedCategory;
+        const matchesCategory =
+            selectedCategory === "All Categories" || community.category === selectedCategory;
         const matchesTab =
-            activeTab === 'discover' ? !community.isJoined :
-                activeTab === 'joined' ? community.isJoined :
-                    true;
+            activeTab === 'discover'
+                ? !community.isJoined
+                : activeTab === 'joined'
+                    ? community.isJoined
+                    : true;
         return matchesSearch && matchesCategory && matchesTab;
     });
 
@@ -246,7 +305,10 @@ export const GroupsPage: React.FC = () => {
                     </div>
 
                     {/* Create Button */}
-                    <button className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg transition-all shadow-lg shadow-purple-500/20 font-medium flex items-center gap-2 whitespace-nowrap">
+                    <button
+                        onClick={openCreateModal}
+                        className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg transition-all shadow-lg shadow-purple-500/20 font-medium flex items-center gap-2 whitespace-nowrap"
+                    >
                         <Plus size={18} />
                         Create Community
                     </button>
@@ -297,7 +359,9 @@ export const GroupsPage: React.FC = () => {
                         <div className="p-5">
                             {/* Avatar */}
                             <div className="flex items-start justify-between mb-3 -mt-12">
-                                <div className={`w-20 h-20 bg-gradient-to-r ${community.banner} rounded-xl flex items-center justify-center font-bold text-white text-2xl border-4 border-gray-800`}>
+                                <div
+                                    className={`w-20 h-20 bg-gradient-to-r ${community.banner} rounded-xl flex items-center justify-center font-bold text-white text-2xl border-4 border-gray-800`}
+                                >
                                     {community.avatar}
                                 </div>
                                 <button
@@ -373,6 +437,15 @@ export const GroupsPage: React.FC = () => {
                     </button>
                 </div>
             )}
+
+            {/* Create Community Modal */}
+            <CreateCommunityModal
+                isOpen={isCreateOpen}
+                onClose={closeCreateModal}
+                onSubmit={handleCreateCommunity}
+                isSubmitting={isSubmitting}
+                serverError={serverError}
+            />
         </div>
     );
 };
