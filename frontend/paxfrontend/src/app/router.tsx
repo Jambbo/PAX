@@ -5,6 +5,7 @@ import {SettingsPage} from "../pages/settings";
 import {MessagesPage} from "../pages/messages";
 import {TrendingPage} from "../pages/trending";
 import {GroupsPage} from "../pages/groups";
+import {BookmarksPage} from "../pages/bookmarks";
 
 
 export const router = createBrowserRouter([
@@ -19,7 +20,7 @@ export const router = createBrowserRouter([
             {path: "messages", element: <MessagesPage/>},
             {path: "trending", element: <TrendingPage/>},
             {path: "groups", element: <GroupsPage/>},
-
+            {path: "bookmarks", element: <BookmarksPage/>},
         ],
     },
 ]);
