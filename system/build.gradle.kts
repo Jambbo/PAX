@@ -1,5 +1,5 @@
 val versions = mapOf(
-    "javaxAnnotationApiVersion" to "1.3.2",
+//    "javaxAnnotationApiVersion" to "1.3.2",
     "javaxValidationApiVersion" to "2.0.0.Final",
     "javaxServletApiVersion" to "2.5",
     "postgresqlVersion" to "42.7.8",
@@ -41,7 +41,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-validation")
-    implementation("javax.annotation:javax.annotation-api:${versions["javaxAnnotationApiVersion"]}")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+//    implementation("javax.annotation:javax.annotation-api:${versions["javaxAnnotationApiVersion"]}")
     implementation("io.jsonwebtoken:jjwt-api:0.13.0")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.13.0")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0")

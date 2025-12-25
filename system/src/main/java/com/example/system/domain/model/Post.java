@@ -26,8 +26,8 @@ public class Post {
     @Column(length = 200)
     String text;
 
-    Long views = 0L;
-    Long likes = 0L;
+    Long views;
+    Long likes;
 
 
     @CreationTimestamp
@@ -50,7 +50,7 @@ public class Post {
             name = "posts_images",
             joinColumns = @JoinColumn(name = "post_id")
     )
-    @Column(name = "image_url")
+    @Column(name = "image")
     List<String> images;
 
     // @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)

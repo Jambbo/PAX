@@ -1,0 +1,112 @@
+package com.example.system.rest.controller;
+
+import com.example.system.domain.model.Post;
+import com.example.system.rest.dto.mapper.PostMapper;
+import com.example.system.rest.dto.post.PostReadResponseDto;
+import com.example.system.rest.dto.post.PostWriteDto;
+import com.example.system.rest.validation.OnCreate;
+import com.example.system.rest.validation.OnUpdate;
+import com.example.system.service.post.PostService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/v1/posts")
+@RequiredArgsConstructor
+public class PostController {
+
+    private final PostService postService;
+    private final PostMapper postMapper;
+
+    @PostMapping
+    public ResponseEntity<PostReadResponseDto> create(
+            @Validated(OnCreate.class) @RequestBody PostWriteDto postWriteDto) {
+        Post post = postMapper.toEntity(postWriteDto);
+        PostReadResponseDto dto = postMapper.toDto(postService.createPost(post));
+        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<PostReadResponseDto> getById(@PathVariable Long id) {
+        Post post = postService.getPostById(id);
+        PostReadResponseDto dto = postMapper.toDto(post);
+        return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<PostReadResponseDto>> getAll() {
+        List<Post> posts = postService.getAllPosts();
+        List<PostReadResponseDto> dtos = postMapper.toDto(posts);
+        return ResponseEntity.ok(dtos);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<PostReadResponseDto> update(
+            @PathVariable Long id,
+            @Validated(OnUpdate.class) @RequestBody PostWriteDto postWriteDto) {
+        Post post = postMapper.toEntity(postWriteDto);
+        PostReadResponseDto dto = postMapper.toDto(postService.updatePost(id, post));
+        return ResponseEntity.ok(dto);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        postService.deletePost(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/author/{authorId}")
+    public ResponseEntity<List<PostReadResponseDto>> getByAuthor(@PathVariable Long authorId) {
+        List<Post> posts = postService.getPostsByAuthorId(authorId);
+        List<PostReadResponseDto> dtos = postMapper.toDto(posts);
+        return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/group/{groupId}")
+    public ResponseEntity<List<PostReadResponseDto>> getByGroup(@PathVariable Long groupId) {
+        List<Post> posts = postService.getPostsByGroupId(groupId);
+        List<PostReadResponseDto> dtos = postMapper.toDto(posts);
+        return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/trending/views")
+    public ResponseEntity<List<PostReadResponseDto>> getTrendingByViews() {
+        List<Post> posts = postService.getTopPostsByViews();
+        List<PostReadResponseDto> dtos = postMapper.toDto(posts);
+        return ResponseEntity.ok(dtos);
+    }
+
+    @GetMapping("/trending/likes")
+    public ResponseEntity<List<PostReadResponseDto>> getTrendingByLikes() {
+        List<Post> posts = postService.getTopPostsByLikes();
+        List<PostReadResponseDto> dtos = postMapper.toDto(posts);
+        return ResponseEntity.ok(dtos);
+    }
+
+    @PostMapping("/{id}/view")
+    public ResponseEntity<PostReadResponseDto> incrementViews(@PathVariable Long id) {
+        Post post = postService.incrementViews(id);
+        PostReadResponseDto dto = postMapper.toDto(post);
+        return ResponseEntity.ok(dto);
+    }
+
+    @PostMapping("/{id}/like")
+    public ResponseEntity<PostReadResponseDto> like(@PathVariable Long id) {
+        Post post = postService.incrementLikes(id);
+        PostReadResponseDto dto = postMapper.toDto(post);
+        return ResponseEntity.ok(dto);
+    }
+
+    @PostMapping("/{id}/unlike")
+    public ResponseEntity<PostReadResponseDto> unlike(@PathVariable Long id) {
+        Post post = postService.decrementLikes(id);
+        PostReadResponseDto dto = postMapper.toDto(post);
+        return ResponseEntity.ok(dto);
+    }
+
+}

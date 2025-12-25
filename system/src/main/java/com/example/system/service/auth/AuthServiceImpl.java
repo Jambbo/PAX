@@ -27,7 +27,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public User register(User user) {
         if (userService.existsByUsername(user.getUsername())) {
-            throw new RuntimeException();//TODO create ResourceAlreadyExistsException
+            throw new RuntimeException("User already exists");//TODO create ResourceAlreadyExistsException
         }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userService.create(user);

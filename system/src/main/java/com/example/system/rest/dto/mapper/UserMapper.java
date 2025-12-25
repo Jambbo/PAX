@@ -12,9 +12,9 @@ import java.util.List;
 public abstract class UserMapper {
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "updatedAt", ignore = true)
     public abstract User toEntity(UserWriteDto dto);
+
+    public abstract List<User> toEntity(List<UserWriteDto> dtos);
 
     public abstract UserReadResponseDto toDto(User user);
 

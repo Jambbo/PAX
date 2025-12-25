@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.validator.constraints.Length;
 
+@Deprecated
 @Data
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PostDto {
