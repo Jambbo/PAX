@@ -2,6 +2,8 @@ package com.example.system.service.user;
 
 import com.example.system.domain.model.User;
 import com.example.system.domain.model.UserStatus;
+import com.example.system.rest.dto.auth.ChangePasswordDto;
+import com.example.system.rest.dto.user.UserWriteDto;
 
 import java.util.List;
 
@@ -10,7 +12,7 @@ public interface UserService {
 
     List<User> findAll();
 
-    User update(User user);
+    User update(Long id, UserWriteDto userWriteDto);
 
     User register(User user);
 
@@ -25,4 +27,5 @@ public interface UserService {
     User updateStatus(Long userId, UserStatus status);
 
     User toggleProfilePrivacy(Long userId);
+
 }

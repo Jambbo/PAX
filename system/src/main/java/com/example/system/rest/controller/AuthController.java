@@ -1,8 +1,10 @@
 package com.example.system.rest.controller;
 
 import com.example.system.domain.model.User;
+import com.example.system.rest.dto.auth.ChangePasswordDto;
 import com.example.system.rest.dto.auth.LoginRequestDto;
 import com.example.system.rest.dto.auth.LoginResponseDto;
+import com.example.system.rest.dto.auth.RegisterUserDto;
 import com.example.system.rest.dto.mapper.UserMapper;
 import com.example.system.rest.dto.user.UserWriteDto;
 import com.example.system.rest.validation.OnCreate;
@@ -10,10 +12,7 @@ import com.example.system.service.auth.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -25,9 +24,9 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(
-            @RequestBody @Validated(OnCreate.class) final UserWriteDto userWriteDto
-    ) {
-        User user = userMapper.toEntity(userWriteDto);
+            @RequestBody @Validated(OnCreate.class) final RegisterUserDto dto
+            ) {
+        User user = userMapper.toEntity(dto);
         return ResponseEntity.ok(userMapper.toDto(authService.register(user)));
     }
 
@@ -41,6 +40,15 @@ public class AuthController {
     @PostMapping("/refresh")
     public LoginResponseDto refresh(@RequestBody String refreshToken) {
         return authService.refresh(refreshToken);
+    }
+
+    @PatchMapping("/{id}/password")
+    public ResponseEntity<Void> changePassword(
+            @PathVariable Long id,
+            @Validated @RequestBody ChangePasswordDto dto
+    ) {
+        authService.changePassword(id, dto);
+        return ResponseEntity.noContent().build();
     }
 
 }
