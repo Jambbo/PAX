@@ -2,6 +2,7 @@ package com.example.system.service.user;
 
 import com.example.system.domain.model.User;
 import com.example.system.domain.model.UserStatus;
+import com.example.system.rest.dto.user.UserWriteDto;
 
 import java.util.List;
 
@@ -10,19 +11,16 @@ public interface UserService {
 
     List<User> findAll();
 
-    User update(User user);
-
-    User register(User user);
+    User update(Long id, UserWriteDto userWriteDto);
 
     User getByUsername(String username);
 
     boolean existsByUsername(String username);
-
-    User create(User user);
 
     void deleteUser(Long userId);
 
     User updateStatus(Long userId, UserStatus status);
 
     User toggleProfilePrivacy(Long userId);
+
 }

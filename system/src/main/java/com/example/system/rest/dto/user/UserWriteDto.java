@@ -8,9 +8,6 @@ import org.hibernate.validator.constraints.Length;
 
 
 public record UserWriteDto(
-        @Null(message = "id must be null.", groups = OnCreate.class)
-        @NotNull(message = "id must be provided for update.", groups = OnUpdate.class)
-        Long id,
 
         @NotNull(message = "username must not be mull", groups = {OnUpdate.class, OnCreate.class})
         @Length(
@@ -30,16 +27,6 @@ public record UserWriteDto(
         String email,
 
 
-        @NotBlank(message = "password is required.", groups = OnCreate.class)
-        @Length(min = 8, max = 255,
-                message = "password length must be between {min} and {max}.",
-                groups = {OnCreate.class})
-        String password,
-
-        @NotBlank(message = "password confirmation is required.", groups = OnCreate.class)
-        @Length(min = 8, max = 255, groups = {OnCreate.class})
-        String passwordConfirmation,
-
         @Length(max = 100, groups = {OnCreate.class, OnUpdate.class})
         String firstName,
 
@@ -53,16 +40,4 @@ public record UserWriteDto(
 
         boolean isProfilePrivate
 
-) {
-    @AssertTrue(message = "password and passwordConfirmation must match",
-            groups = {
-                    OnCreate.class, OnUpdate.class
-            })
-    public boolean isPasswordMatching() {
-        if (password == null && passwordConfirmation == null) return true;
-        if (password == null || passwordConfirmation == null) return false;
-        return password.equals(passwordConfirmation);
-    }
-
-
-}
+) {}

@@ -3,7 +3,6 @@ CREATE TABLE IF NOT EXISTS users
     id                  BIGSERIAL PRIMARY KEY,
     username            VARCHAR(50)  NOT NULL UNIQUE,
     email               VARCHAR(255) UNIQUE,
-    password            VARCHAR(255) NOT NULL,
     first_name          VARCHAR(100),
     last_name           VARCHAR(100),
     bio                 TEXT,
@@ -93,4 +92,13 @@ CREATE TABLE IF NOT EXISTS users_roles
     role    VARCHAR(255) NOT NULL,
     PRIMARY KEY (user_id, role),
     CONSTRAINT fk_users_roles_users FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE NO ACTION
+);
+
+CREATE TABLE IF NOT EXISTS users_posts
+(
+    user_id BIGINT NOT NULL,
+    post_id BIGINT NOT NULL,
+    PRIMARY KEY (user_id, post_id),
+    CONSTRAINT fk_users_posts_users FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_users_posts_posts FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
 );
