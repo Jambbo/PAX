@@ -1,5 +1,6 @@
 package com.example.system.config;
 
+import com.example.system.service.currentUser.UserProvisioningFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.springframework.context.annotation.Bean;
@@ -15,6 +16,7 @@ import org.springframework.security.config.annotation.web.configurers.oauth2.ser
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -22,6 +24,9 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final UserProvisioningFilter userProvisioningFilter;
+
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -76,7 +81,11 @@ public class SecurityConfig {
                                 .anyRequest()
                                 .authenticated())
                 .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt)
-                .anonymous(AbstractHttpConfigurer::disable);
+                .anonymous(AbstractHttpConfigurer::disable)
+                .addFilterAfter(
+                        userProvisioningFilter,
+                        BearerTokenAuthenticationFilter.class
+                );
         return httpSecurity.build();
     }
 

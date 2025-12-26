@@ -61,7 +61,7 @@ public class PostController {
     }
 
     @GetMapping("/author/{authorId}")
-    public ResponseEntity<List<PostReadResponseDto>> getByAuthor(@PathVariable Long authorId) {
+    public ResponseEntity<List<PostReadResponseDto>> getByAuthor(@PathVariable String authorId) {
         List<Post> posts = postService.getPostsByAuthorId(authorId);
         List<PostReadResponseDto> dtos = postMapper.toDto(posts);
         return ResponseEntity.ok(dtos);

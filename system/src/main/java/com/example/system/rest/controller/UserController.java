@@ -9,6 +9,8 @@ import com.example.system.rest.validation.OnUpdate;
 import com.example.system.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,7 +33,7 @@ public class UserController {
 //    }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserReadResponseDto> getById(@PathVariable("id") final Long userId) {
+    public ResponseEntity<UserReadResponseDto> getById(@PathVariable("id") final String userId) {
         UserReadResponseDto dto = userMapper.toDto(userService.findUserById(userId));
         return ResponseEntity.ok(dto);
     }
@@ -44,7 +46,7 @@ public class UserController {
 
     @PutMapping("/{id}")
     public ResponseEntity<UserReadResponseDto> update(
-            @PathVariable("id") final Long userId,
+            @PathVariable("id") final String userId,
             @Validated(OnUpdate.class) @RequestBody UserWriteDto userWriteDto
     ) {
         User updatedUser = userService.update(userId, userWriteDto);
@@ -52,7 +54,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable("id") final Long userId) {
+    public ResponseEntity<Void> delete(@PathVariable("id") final String userId) {
         userService.deleteUser(userId);
         return ResponseEntity.noContent().build();
     }
@@ -72,22 +74,20 @@ public class UserController {
         ));
     }
 
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<UserReadResponseDto> updateStatus(
-            @PathVariable("id") final Long userId,
+    @PatchMapping("/me/status")
+    public ResponseEntity<UserReadResponseDto> updateMyStatus(
+            @AuthenticationPrincipal Jwt jwt,
             @RequestBody Map<String, String> statusUpdate
     ) {
         UserStatus status = UserStatus.valueOf(statusUpdate.get("status"));
-        User user = userService.updateStatus(userId, status);
+        User user = userService.updateStatus(jwt.getSubject(), status);
         UserReadResponseDto dto = userMapper.toDto(user);
         return ResponseEntity.ok(dto);
     }
 
-    @PatchMapping("/{id}/privacy")
-    public ResponseEntity<UserReadResponseDto> togglePrivacy(@PathVariable("id") final Long userId) {
-        User user = userService.toggleProfilePrivacy(userId);
-        UserReadResponseDto dto = userMapper.toDto(user);
-        return ResponseEntity.ok(dto);
+    @PatchMapping("/me/profile-privacy")
+    public User toggleMyPrivacy(@AuthenticationPrincipal Jwt jwt) {
+        return userService.toggleProfilePrivacy(jwt.getSubject());
     }
 
 

@@ -16,7 +16,7 @@ public interface PostService {
 
     void deletePost(Long id);
 
-    List<Post> getPostsByAuthorId(Long authorId);
+    List<Post> getPostsByAuthorId(String authorId);
 
     List<Post> getPostsByGroupId(Long groupId);
 

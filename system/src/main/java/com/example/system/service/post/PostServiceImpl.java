@@ -67,7 +67,7 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Post> getPostsByAuthorId(Long authorId) {
+    public List<Post> getPostsByAuthorId(String authorId) {
         return postRepository.findByAuthorIdOrderByCreatedAtDesc(authorId);
     }
 

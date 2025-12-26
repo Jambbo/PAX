@@ -24,8 +24,8 @@ import java.util.Set;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long id;
+    @Column(length = 36)
+    String id; // Keycloak user id (sub)
 
     @Column(unique = true, nullable = false, length = 50)
     String username;
