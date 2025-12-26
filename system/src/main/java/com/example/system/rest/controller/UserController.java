@@ -2,16 +2,12 @@ package com.example.system.rest.controller;
 
 import com.example.system.domain.model.User;
 import com.example.system.domain.model.UserStatus;
-import com.example.system.rest.dto.auth.ChangePasswordDto;
 import com.example.system.rest.dto.mapper.UserMapper;
 import com.example.system.rest.dto.user.UserReadResponseDto;
 import com.example.system.rest.dto.user.UserWriteDto;
-import com.example.system.rest.validation.OnCreate;
 import com.example.system.rest.validation.OnUpdate;
-import com.example.system.service.auth.AuthService;
 import com.example.system.service.user.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -51,7 +47,7 @@ public class UserController {
             @PathVariable("id") final Long userId,
             @Validated(OnUpdate.class) @RequestBody UserWriteDto userWriteDto
     ) {
-        User updatedUser = userService.update(userId,userWriteDto);
+        User updatedUser = userService.update(userId, userWriteDto);
         return ResponseEntity.ok(userMapper.toDto(updatedUser));
     }
 
@@ -71,8 +67,8 @@ public class UserController {
     public ResponseEntity<Map<String, Boolean>> checkUsernameAvailability(@PathVariable("username") final String username) {
         boolean exists = userService.existsByUsername(username);
         return ResponseEntity.ok(Map.of(
-            "exists", exists,
-            "available", !exists
+                "exists", exists,
+                "available", !exists
         ));
     }
 
@@ -93,7 +89,6 @@ public class UserController {
         UserReadResponseDto dto = userMapper.toDto(user);
         return ResponseEntity.ok(dto);
     }
-
 
 
 }

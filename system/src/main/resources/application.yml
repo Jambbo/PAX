@@ -16,6 +16,11 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI}
 
 security:
   jwt:

@@ -34,8 +34,6 @@ public class User {
     @Column(unique = true)
     String email;
 
-    String password;
-
     String firstName;
     String lastName;
     String bio;

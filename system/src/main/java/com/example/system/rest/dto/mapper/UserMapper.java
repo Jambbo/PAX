@@ -1,7 +1,6 @@
 package com.example.system.rest.dto.mapper;
 
 import com.example.system.domain.model.User;
-import com.example.system.rest.dto.auth.RegisterUserDto;
 import com.example.system.rest.dto.user.UserReadResponseDto;
 import com.example.system.rest.dto.user.UserWriteDto;
 import org.mapstruct.Mapper;
@@ -18,10 +17,7 @@ import java.util.List;
 public abstract class UserMapper {
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "password", ignore = true)
     public abstract User toEntity(UserWriteDto dto);
-
-    public abstract User toEntity(RegisterUserDto dto);
 
     public abstract List<User> toEntity(List<UserWriteDto> dtos);
 

@@ -3,7 +3,6 @@ package com.example.system.service.user;
 import com.example.system.domain.model.User;
 import com.example.system.domain.model.UserStatus;
 import com.example.system.repository.UserRepository;
-import com.example.system.rest.dto.auth.ChangePasswordDto;
 import com.example.system.rest.dto.mapper.UserMapper;
 import com.example.system.rest.dto.user.UserWriteDto;
 import lombok.RequiredArgsConstructor;
@@ -43,12 +42,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional
-    public User register(User user) {
-        return userRepository.save(user);
-    }
-
-    @Override
     @Transactional(readOnly = true)
     public User getByUsername(String username) {
         return userRepository.findByUsername(username)//TODO create ResourceNotFoundException
@@ -59,12 +52,6 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public boolean existsByUsername(String username) {
         return userRepository.existsByUsername(username);
-    }
-
-    @Override
-    @Transactional
-    public User create(User user) {
-        return userRepository.save(user);
     }
 
     @Override
@@ -89,7 +76,6 @@ public class UserServiceImpl implements UserService {
         user.setProfilePrivate(!user.isProfilePrivate());
         return userRepository.save(user);
     }
-
 
 
 }
