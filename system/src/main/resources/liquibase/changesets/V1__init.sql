@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS users
 (
-    id                  BIGSERIAL PRIMARY KEY,
+    id                  VARCHAR(36) PRIMARY KEY,
     username            VARCHAR(50)  NOT NULL UNIQUE,
     email               VARCHAR(255) UNIQUE,
     first_name          VARCHAR(100),
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS groups
     location     VARCHAR(255),
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    owner_id     BIGINT,
+    owner_id     VARCHAR(36),
     rules        VARCHAR(1000),
     member_count INT       DEFAULT 0,
     post_count   INT       DEFAULT 0,
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS posts
     likes      BIGINT    DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    author_id  BIGINT,
+    author_id  VARCHAR(36),
     group_id   BIGINT,
     CONSTRAINT fk_posts_users FOREIGN KEY (author_id) REFERENCES users (id) ON DELETE SET NULL,
     CONSTRAINT fk_posts_groups FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE
@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS posts_images
 CREATE TABLE IF NOT EXISTS group_members
 (
     group_id BIGINT NOT NULL,
-    user_id  BIGINT NOT NULL,
+    user_id  VARCHAR(36) NOT NULL,
     PRIMARY KEY (group_id, user_id),
     CONSTRAINT fk_group_members_groups FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
     CONSTRAINT fk_group_members_users FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS group_members
 CREATE TABLE IF NOT EXISTS group_admins
 (
     group_id BIGINT NOT NULL,
-    user_id  BIGINT NOT NULL,
+    user_id  VARCHAR(36) NOT NULL,
     PRIMARY KEY (group_id, user_id),
     CONSTRAINT fk_group_members_groups FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
     CONSTRAINT fk_group_members_users FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -80,15 +80,15 @@ CREATE TABLE IF NOT EXISTS group_admins
 --manytomany
 CREATE TABLE IF NOT EXISTS user_friends
 (
-    user_id   BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    friend_id BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    user_id   VARCHAR(36) NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    friend_id VARCHAR(36) NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     PRIMARY KEY (user_id, friend_id),
     CONSTRAINT user_not_self CHECK (user_id <> friend_id)
 );
 
 CREATE TABLE IF NOT EXISTS users_roles
 (
-    user_id BIGINT       NOT NULL,
+    user_id VARCHAR(36)       NOT NULL,
     role    VARCHAR(255) NOT NULL,
     PRIMARY KEY (user_id, role),
     CONSTRAINT fk_users_roles_users FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE NO ACTION
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS users_roles
 
 CREATE TABLE IF NOT EXISTS users_posts
 (
-    user_id BIGINT NOT NULL,
+    user_id VARCHAR(36) NOT NULL,
     post_id BIGINT NOT NULL,
     PRIMARY KEY (user_id, post_id),
     CONSTRAINT fk_users_posts_users FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,

@@ -20,7 +20,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public User findUserById(Long userId) {
+    public User findUserById(String userId) {
         return userRepository.findById(userId).orElseThrow(
                 () -> new RuntimeException("User with id=" + userId + " not found.")
         );
@@ -34,7 +34,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public User update(Long id, UserWriteDto dto) {
+    public User update(String id, UserWriteDto dto) {
         //retrieving existingUser to use its id in order to have a consistent id from db for the updated user
         User existingUser = findUserById(id);
         userMapper.updateEntityFromDto(dto, existingUser);
@@ -56,14 +56,14 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public void deleteUser(Long userId) {
+    public void deleteUser(String userId) {
         User user = findUserById(userId);
         userRepository.delete(user);
     }
 
     @Override
     @Transactional
-    public User updateStatus(Long userId, UserStatus status) {
+    public User updateStatus(String userId, UserStatus status) {
         User user = findUserById(userId);
         user.setStatus(status);
         return userRepository.save(user);
@@ -71,7 +71,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public User toggleProfilePrivacy(Long userId) {
+    public User toggleProfilePrivacy(String userId) {
         User user = findUserById(userId);
         user.setProfilePrivate(!user.isProfilePrivate());
         return userRepository.save(user);

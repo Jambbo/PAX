@@ -7,20 +7,20 @@ import com.example.system.rest.dto.user.UserWriteDto;
 import java.util.List;
 
 public interface UserService {
-    User findUserById(Long userId);
+    User findUserById(String userId);
 
     List<User> findAll();
 
-    User update(Long id, UserWriteDto userWriteDto);
+    User update(String id, UserWriteDto userWriteDto);
 
     User getByUsername(String username);
 
     boolean existsByUsername(String username);
 
-    void deleteUser(Long userId);
+    void deleteUser(String userId);
 
-    User updateStatus(Long userId, UserStatus status);
+    User updateStatus(String userId, UserStatus status);
 
-    User toggleProfilePrivacy(Long userId);
+    User toggleProfilePrivacy(String userId);
 
 }

@@ -9,12 +9,12 @@ import java.util.List;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
 
-    List<Post> findByAuthorId(Long authorId);
+    List<Post> findByAuthorId(String authorId);
 
     List<Post> findByGroupId(Long groupId);
 
     @Query("SELECT p FROM Post p WHERE p.author.id = :authorId ORDER BY p.createdAt DESC")
-    List<Post> findByAuthorIdOrderByCreatedAtDesc(@Param("authorId") Long authorId);
+    List<Post> findByAuthorIdOrderByCreatedAtDesc(@Param("authorId") String authorId);
 
     @Query("SELECT p FROM Post p WHERE p.group.id = :groupId ORDER BY p.createdAt DESC")
     List<Post> findByGroupIdOrderByCreatedAtDesc(@Param("groupId") Long groupId);
