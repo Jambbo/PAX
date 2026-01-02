@@ -9,6 +9,7 @@ import com.example.system.rest.validation.OnUpdate;
 import com.example.system.service.post.PostService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -45,6 +46,7 @@ public class PostController {
         return ResponseEntity.ok(dtos);
     }
 
+    @PreAuthorize("@ownership.isOwner(#id)")
     @PutMapping("/{id}")
     public ResponseEntity<PostReadResponseDto> update(
             @PathVariable Long id,
@@ -54,6 +56,7 @@ public class PostController {
         return ResponseEntity.ok(dto);
     }
 
+    @PreAuthorize("@ownership.isOwner(#id)")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         postService.deletePost(id);

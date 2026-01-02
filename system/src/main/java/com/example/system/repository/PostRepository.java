@@ -24,4 +24,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @Query("SELECT p FROM Post p ORDER BY p.likes DESC")
     List<Post> findTopByLikes();
+
+    boolean existsByIdAndAuthorId(Long postId, String currentUserId);
 }
