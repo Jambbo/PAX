@@ -9,6 +9,7 @@ import com.example.system.rest.validation.OnUpdate;
 import com.example.system.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
@@ -52,7 +53,7 @@ public class UserController {
         User updatedUser = userService.update(userId, userWriteDto);
         return ResponseEntity.ok(userMapper.toDto(updatedUser));
     }
-
+    @PreAuthorize("@userAuth.isAdmin()")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable("id") final String userId) {
         userService.deleteUser(userId);
