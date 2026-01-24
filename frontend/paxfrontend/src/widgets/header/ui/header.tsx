@@ -1,8 +1,13 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import {Search} from "./search";
+import {useAuth} from "../../../features/Auth/useAuth";
+import {login, logout} from "../../../features/Auth/authService";
 
 export const Header: React.FC = () => {
+
+    const { authenticated } = useAuth();
+
     return (
         <header className="fixed z-50 top-0  w-full h-16 bg-gray-950 text-white shadow-lg">
             <div className="px-6 py-4 flex items-center justify-between">
@@ -26,18 +31,29 @@ export const Header: React.FC = () => {
 
                 {/* Auth buttons */}
                 <div className="hidden md:flex space-x-3">
-                    <Link
-                        to="/signin"
-                        className="px-4 py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 transition"
-                    >
-                        Sign In
-                    </Link>
-                    <Link
-                        to="/signup"
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-                    >
-                        Sign Up
-                    </Link>
+                    {!authenticated ? (
+                        <>
+                            <button
+                                onClick={login}
+                                className="px-4 py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50"
+                            >
+                                Sign In
+                            </button>
+                            <button
+                                onClick={login}
+                                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                            >
+                                Sign Up
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            onClick={logout}
+                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                        >
+                            Logout
+                        </button>
+                    )}
                 </div>
 
                 {/* Mobile menu icon */}

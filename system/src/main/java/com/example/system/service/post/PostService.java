@@ -12,7 +12,7 @@ public interface PostService {
 
     List<Post> getAllPosts();
 
-    Post updatePost(Long id, Post post);
+    Post updatePost(Long postId, Post post);
 
     void deletePost(Long id);
 

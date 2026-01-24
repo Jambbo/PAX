@@ -42,8 +42,8 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional
-    public Post updatePost(Long id, Post post) {
-        Post existingPost = getPostById(id);
+    public Post updatePost(Long postId, Post post) {
+        Post existingPost = getPostById(postId);
 
         if (post.getText() != null) {
             existingPost.setText(post.getText());

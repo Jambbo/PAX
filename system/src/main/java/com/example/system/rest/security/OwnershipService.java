@@ -2,6 +2,7 @@ package com.example.system.rest.security;
 
 import com.example.system.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
@@ -19,10 +20,16 @@ public class OwnershipService implements SecurityService {
 
     @Override
     public String getCurrentUserId() {
-        return ((JwtAuthenticationToken)
-                SecurityContextHolder.getContext()
-                        .getAuthentication())
-                .getToken()
-                .getSubject();
+        Authentication auth = SecurityContextHolder
+                .getContext()
+                .getAuthentication();
+
+        if (auth instanceof JwtAuthenticationToken jwtAuth) {
+            return jwtAuth
+                    .getToken()
+                    .getSubject();
+        }
+        return null;
+
     }
 }
