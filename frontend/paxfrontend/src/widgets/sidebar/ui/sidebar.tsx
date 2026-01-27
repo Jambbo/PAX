@@ -19,9 +19,11 @@ import {Link} from "react-router-dom";
 interface SidebarProps {
     isOpen: boolean;
     toggleMenu: () => void;
+    isAuthenticated: boolean; //  Глеб я не нашел твой метод на проверку
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({isOpen, toggleMenu}) => {
+//
+export const Sidebar: React.FC<SidebarProps> = ({isOpen, toggleMenu, isAuthenticated}) => {
     const [activeItem, setActiveItem] = useState("home");
 
     const menuItems = [
@@ -45,7 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({isOpen, toggleMenu}) => {
             className={`bg-gray-950/95 backdrop-blur-xl border-r border-gray-800/50 text-white fixed top-16 left-0 h-[calc(100vh-4rem)] transition-all duration-300 flex flex-col shadow-2xl z-40
         ${isOpen ? "w-72" : "w-20"}`}
         >
-            {/* Toggle Button */}
+            {/* тут тогл робим */}
             <div className="flex items-center justify-between p-4 border-b border-gray-800/50">
                 {isOpen && (
                     <span className="font-semibold text-sm text-gray-400 uppercase tracking-wider">
@@ -64,9 +66,8 @@ export const Sidebar: React.FC<SidebarProps> = ({isOpen, toggleMenu}) => {
             <nav
                 className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-thin scrollbar-thumb-gray-800 scrollbar-track-transparent">
                 {menuItems.map((item) => (
-                    <Link to={`${item.id}`}>
+                    <Link to={`${item.id}`} key={item.id}>
                         <button
-                            key={item.id}
                             onClick={() => setActiveItem(item.id)}
                             className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group relative
                 ${activeItem === item.id
@@ -139,11 +140,15 @@ export const Sidebar: React.FC<SidebarProps> = ({isOpen, toggleMenu}) => {
                         {isOpen && <span className="text-sm font-medium">Settings</span>}
                     </button>
                 </Link>
-                <button
-                    className="w-full flex items-center gap-3 px-3 py-3 rounded-lg bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white transition-all duration-200 shadow-lg shadow-red-500/20">
-                    <LogOut size={20} className="flex-shrink-0"/>
-                    {isOpen && <span className="text-sm font-medium">Logout</span>}
-                </button>
+
+                {/*  ну и когда мы залогинены, то должна появится кнопка*/}
+                {isAuthenticated && (
+                    <button
+                        className="w-full flex items-center gap-3 px-3 py-3 rounded-lg bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white transition-all duration-200 shadow-lg shadow-red-500/20">
+                        <LogOut size={20} className="flex-shrink-0"/>
+                        {isOpen && <span className="text-sm font-medium">Logout</span>}
+                    </button>
+                )}
             </div>
         </div>
     );
