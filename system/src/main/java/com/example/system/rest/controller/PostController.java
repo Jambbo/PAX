@@ -46,20 +46,20 @@ public class PostController {
         return ResponseEntity.ok(dtos);
     }
 
-    @PreAuthorize("@ownership.isOwner(#id)")
-    @PutMapping("/{id}")
+    @PreAuthorize("@ownership.isOwner(#postId)")
+    @PutMapping("/{postId}")
     public ResponseEntity<PostReadResponseDto> update(
-            @PathVariable Long id,
+            @PathVariable Long postId,
             @Validated(OnUpdate.class) @RequestBody PostWriteDto postWriteDto) {
         Post post = postMapper.toEntity(postWriteDto);
-        PostReadResponseDto dto = postMapper.toDto(postService.updatePost(id, post));
+        PostReadResponseDto dto = postMapper.toDto(postService.updatePost(postId, post));
         return ResponseEntity.ok(dto);
     }
 
-    @PreAuthorize("@ownership.isOwner(#id)")
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        postService.deletePost(id);
+    @PreAuthorize("@ownership.isOwner(#postId) or hasRole('ADMIN')")
+    @DeleteMapping("/{postId}")
+    public ResponseEntity<Void> delete(@PathVariable Long postId) {
+        postService.deletePost(postId);
         return ResponseEntity.noContent().build();
     }
 

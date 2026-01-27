@@ -6,6 +6,7 @@ import {MessagesPage} from "../pages/messages";
 import {TrendingPage} from "../pages/trending";
 import {GroupsPage} from "../pages/groups";
 import {BookmarksPage} from "../pages/bookmarks";
+import {AuthCallback} from "../features/Auth/AuthCallback";
 
 
 export const router = createBrowserRouter([
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
             {path: "trending", element: <TrendingPage/>},
             {path: "groups", element: <GroupsPage/>},
             {path: "bookmarks", element: <BookmarksPage/>},
+            {path: "/auth/callback", element: <AuthCallback/>},
         ],
     },
 ]);
