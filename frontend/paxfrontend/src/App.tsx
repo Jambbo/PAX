@@ -1,11 +1,20 @@
-
 import { Outlet } from 'react-router-dom';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from "./widgets/header";
 import { Sidebar } from "./widgets/sidebar";
 
 const App: React.FC = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+    useEffect(() => {
+        const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+        if (token) {
+            setIsAuthenticated(true);
+        } else {
+            setIsAuthenticated(false);
+        }
+    }, []);
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
@@ -13,10 +22,15 @@ const App: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-gray-950">
-            <Header />
-            <Sidebar isOpen={isSidebarOpen} toggleMenu={toggleSidebar} />
+            {}
+            <Header isAuthenticated={isAuthenticated} />
 
-            {/* Main Content Area */}
+            <Sidebar
+                isOpen={isSidebarOpen}
+                toggleMenu={toggleSidebar}
+                isAuthenticated={isAuthenticated}
+            />
+
             <main
                 className={`transition-all duration-300 pt-16 ${
                     isSidebarOpen ? 'ml-72' : 'ml-20'
