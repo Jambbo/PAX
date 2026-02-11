@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TrendingUp, Flame, Clock, MessageSquare, Heart, Share2, Bookmark, Eye, ArrowUp, Award, Users, Hash } from 'lucide-react';
 
 interface TrendingPost {
@@ -26,6 +26,26 @@ interface TrendingTopic {
 }
 
 export const TrendingPage: React.FC = () => {
+    // --- ЛОГІКА КОЛЬОРІВ ---
+    const [accentColor, setAccentColor] = useState(() => {
+        return localStorage.getItem('site_accent_color') || 'purple';
+    });
+
+    useEffect(() => {
+        const handleStorageChange = () => {
+            setAccentColor(localStorage.getItem('site_accent_color') || 'purple');
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('accent-color-change', handleStorageChange);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('accent-color-change', handleStorageChange);
+        };
+    }, []);
+    // -----------------------
+
     const [activeFilter, setActiveFilter] = useState<'hot' | 'rising' | 'top'>('hot');
     const [posts, setPosts] = useState<TrendingPost[]>([
         {
@@ -162,11 +182,11 @@ export const TrendingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto">
             {/* Header */}
             <div className="mb-8">
-                <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
-                    <TrendingUp className="text-purple-500" size={40} />
+                <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-3 transition-colors">
+                    <TrendingUp className={`text-${accentColor}-500`} size={40} />
                     Trending Now
                 </h1>
-                <p className="text-gray-400 text-lg">
+                <p className="text-gray-500 dark:text-gray-400 text-lg transition-colors">
                     Discover what's hot in the community right now
                 </p>
             </div>
@@ -175,15 +195,15 @@ export const TrendingPage: React.FC = () => {
                 {/* Main Content */}
                 <div className="flex-1">
                     {/* Filter Tabs */}
-                    <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-2 flex gap-2 mb-6">
+                    <div className="bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-xl p-2 flex gap-2 mb-6 transition-colors shadow-sm">
                         {filters.map((filter) => (
                             <button
                                 key={filter.id}
                                 onClick={() => setActiveFilter(filter.id as 'hot' | 'rising' | 'top')}
                                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-all font-medium ${
                                     activeFilter === filter.id
-                                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20'
-                                        : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                                        ? `bg-${accentColor}-600 text-white shadow-lg shadow-${accentColor}-500/20`
+                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50'
                                 }`}
                             >
                                 <filter.icon size={20} className={activeFilter === filter.id ? 'text-white' : filter.color} />
@@ -197,29 +217,31 @@ export const TrendingPage: React.FC = () => {
                         {filteredPosts.map((post, index) => (
                             <div
                                 key={post.id}
-                                className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-6 hover:bg-gray-800/50 transition-all cursor-pointer group"
+                                className="bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-xl p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all cursor-pointer group shadow-sm"
                             >
                                 {/* Post Header */}
                                 <div className="flex items-start gap-4 mb-4">
                                     {/* Rank Badge */}
-                                    <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                                    <div className={`flex-shrink-0 w-12 h-12 bg-${accentColor}-600 rounded-lg flex items-center justify-center shadow-lg shadow-${accentColor}-500/20`}>
                                         <span className="text-white font-bold text-lg">{index + 1}</span>
                                     </div>
 
                                     {/* Author Info */}
                                     <div className="flex-1">
                                         <div className="flex items-center gap-3 mb-2">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
+                                            {/* Avatar (Random Gradient) */}
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-md ${
                                                 index % 3 === 0 ? 'bg-gradient-to-br from-orange-500 to-red-600' :
                                                     index % 2 === 0 ? 'bg-gradient-to-br from-blue-500 to-cyan-600' :
                                                         'bg-gradient-to-br from-green-500 to-emerald-600'
                                             }`}>
                                                 {post.authorAvatar}
                                             </div>
+
                                             <div>
-                                                <p className="text-white font-semibold">{post.author}</p>
-                                                <div className="flex items-center gap-2 text-sm text-gray-400">
-                                                    <span className={`px-2 py-0.5 bg-${post.categoryColor}-600/20 text-${post.categoryColor}-400 rounded text-xs font-medium`}>
+                                                <p className="text-gray-900 dark:text-white font-semibold transition-colors">{post.author}</p>
+                                                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                                                    <span className={`px-2 py-0.5 bg-${post.categoryColor}-100 dark:bg-${post.categoryColor}-600/20 text-${post.categoryColor}-700 dark:text-${post.categoryColor}-400 rounded text-xs font-medium`}>
                                                         {post.category}
                                                     </span>
                                                     <span>•</span>
@@ -230,18 +252,18 @@ export const TrendingPage: React.FC = () => {
                                         </div>
 
                                         {/* Post Content */}
-                                        <h2 className="text-white font-bold text-xl mb-2 group-hover:text-purple-400 transition-colors">
+                                        <h2 className={`text-gray-900 dark:text-white font-bold text-xl mb-2 group-hover:text-${accentColor}-600 dark:group-hover:text-${accentColor}-400 transition-colors`}>
                                             {post.title}
                                         </h2>
-                                        <p className="text-gray-400 leading-relaxed">
+                                        <p className="text-gray-600 dark:text-gray-300 leading-relaxed transition-colors">
                                             {post.content}
                                         </p>
                                     </div>
                                 </div>
 
                                 {/* Post Stats & Actions */}
-                                <div className="flex items-center justify-between pt-4 border-t border-gray-700/50">
-                                    <div className="flex items-center gap-6 text-gray-400 text-sm">
+                                <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700/50 mt-4">
+                                    <div className="flex items-center gap-6 text-gray-500 dark:text-gray-400 text-sm">
                                         <div className="flex items-center gap-1.5">
                                             <Eye size={16} />
                                             <span>{post.views.toLocaleString()}</span>
@@ -264,8 +286,8 @@ export const TrendingPage: React.FC = () => {
                                             }}
                                             className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${
                                                 post.isLiked
-                                                    ? 'bg-red-600/20 text-red-400 hover:bg-red-600/30'
-                                                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700 hover:text-white'
+                                                    ? 'bg-red-100 dark:bg-red-600/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-600/30'
+                                                    : 'bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
                                             }`}
                                         >
                                             <Heart size={16} className={post.isLiked ? 'fill-current' : ''} />
@@ -278,13 +300,13 @@ export const TrendingPage: React.FC = () => {
                                             }}
                                             className={`p-2 rounded-lg transition-all ${
                                                 post.isSaved
-                                                    ? 'bg-purple-600/20 text-purple-400 hover:bg-purple-600/30'
-                                                    : 'bg-gray-700/50 text-gray-400 hover:bg-gray-700 hover:text-white'
+                                                    ? `bg-${accentColor}-100 dark:bg-${accentColor}-600/20 text-${accentColor}-600 dark:text-${accentColor}-400 hover:bg-${accentColor}-200 dark:hover:bg-${accentColor}-600/30`
+                                                    : 'bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
                                             }`}
                                         >
                                             <Bookmark size={16} className={post.isSaved ? 'fill-current' : ''} />
                                         </button>
-                                        <button className="p-2 rounded-lg bg-gray-700/50 text-gray-400 hover:bg-gray-700 hover:text-white transition-all">
+                                        <button className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-all">
                                             <Share2 size={16} />
                                         </button>
                                     </div>
@@ -297,25 +319,25 @@ export const TrendingPage: React.FC = () => {
                 {/* Sidebar */}
                 <div className="lg:w-80 space-y-6">
                     {/* Trending Topics */}
-                    <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-6">
+                    <div className="bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-xl p-6 shadow-sm transition-colors">
                         <div className="flex items-center gap-2 mb-4">
-                            <Hash className="text-purple-500" size={20} />
-                            <h3 className="text-white font-bold text-lg">Trending Topics</h3>
+                            <Hash className={`text-${accentColor}-500`} size={20} />
+                            <h3 className="text-gray-900 dark:text-white font-bold text-lg transition-colors">Trending Topics</h3>
                         </div>
                         <div className="space-y-3">
                             {trendingTopics.map((topic, index) => (
                                 <button
                                     key={topic.id}
-                                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-700/50 transition-all group"
+                                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all group"
                                 >
-                                    <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                                    <div className={`w-8 h-8 bg-${accentColor}-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-md`}>
                                         {index + 1}
                                     </div>
                                     <div className="flex-1 text-left">
-                                        <p className="text-white font-semibold group-hover:text-purple-400 transition-colors">
+                                        <p className={`text-gray-900 dark:text-white font-semibold group-hover:text-${accentColor}-600 dark:group-hover:text-${accentColor}-400 transition-colors`}>
                                             #{topic.name}
                                         </p>
-                                        <p className="text-gray-400 text-sm">{topic.posts} posts</p>
+                                        <p className="text-gray-500 dark:text-gray-400 text-sm">{topic.posts} posts</p>
                                     </div>
                                     <ArrowUp className="text-green-500" size={16} />
                                 </button>
@@ -324,37 +346,37 @@ export const TrendingPage: React.FC = () => {
                     </div>
 
                     {/* Community Stats */}
-                    <div className="bg-gradient-to-br from-purple-600/10 to-indigo-600/10 border border-purple-500/20 rounded-xl p-6">
+                    <div className={`bg-${accentColor}-50 dark:bg-${accentColor}-900/10 border border-${accentColor}-200 dark:border-${accentColor}-500/20 rounded-xl p-6 transition-colors`}>
                         <div className="flex items-center gap-2 mb-4">
-                            <Users className="text-purple-400" size={20} />
-                            <h3 className="text-white font-bold text-lg">Community Stats</h3>
+                            <Users className={`text-${accentColor}-600 dark:text-${accentColor}-400`} size={20} />
+                            <h3 className="text-gray-900 dark:text-white font-bold text-lg transition-colors">Community Stats</h3>
                         </div>
                         <div className="space-y-4">
                             <div>
                                 <div className="flex items-center justify-between mb-1">
-                                    <span className="text-gray-400 text-sm">Active Members</span>
-                                    <span className="text-white font-bold">8,234</span>
+                                    <span className="text-gray-600 dark:text-gray-400 text-sm">Active Members</span>
+                                    <span className="text-gray-900 dark:text-white font-bold">8,234</span>
                                 </div>
-                                <div className="w-full bg-gray-700/50 rounded-full h-2">
-                                    <div className="bg-gradient-to-r from-purple-600 to-indigo-600 h-2 rounded-full" style={{ width: '75%' }} />
-                                </div>
-                            </div>
-                            <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="text-gray-400 text-sm">Posts Today</span>
-                                    <span className="text-white font-bold">1,423</span>
-                                </div>
-                                <div className="w-full bg-gray-700/50 rounded-full h-2">
-                                    <div className="bg-gradient-to-r from-green-500 to-emerald-600 h-2 rounded-full" style={{ width: '60%' }} />
+                                <div className="w-full bg-gray-200 dark:bg-gray-700/50 rounded-full h-2">
+                                    <div className={`bg-${accentColor}-600 h-2 rounded-full`} style={{ width: '75%' }} />
                                 </div>
                             </div>
                             <div>
                                 <div className="flex items-center justify-between mb-1">
-                                    <span className="text-gray-400 text-sm">Engagement Rate</span>
-                                    <span className="text-white font-bold">92%</span>
+                                    <span className="text-gray-600 dark:text-gray-400 text-sm">Posts Today</span>
+                                    <span className="text-gray-900 dark:text-white font-bold">1,423</span>
                                 </div>
-                                <div className="w-full bg-gray-700/50 rounded-full h-2">
-                                    <div className="bg-gradient-to-r from-blue-500 to-cyan-600 h-2 rounded-full" style={{ width: '92%' }} />
+                                <div className="w-full bg-gray-200 dark:bg-gray-700/50 rounded-full h-2">
+                                    <div className="bg-green-500 h-2 rounded-full" style={{ width: '60%' }} />
+                                </div>
+                            </div>
+                            <div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-gray-600 dark:text-gray-400 text-sm">Engagement Rate</span>
+                                    <span className="text-gray-900 dark:text-white font-bold">92%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 dark:bg-gray-700/50 rounded-full h-2">
+                                    <div className="bg-blue-500 h-2 rounded-full" style={{ width: '92%' }} />
                                 </div>
                             </div>
                         </div>

@@ -1,22 +1,43 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Search } from "./search";
 import { User } from "lucide-react";
+import {login} from "../../../features/Auth/authService";
 
 
 interface HeaderProps {
     isAuthenticated: boolean;
 }
 
-
 export const Header: React.FC<HeaderProps> = ({ isAuthenticated }) => {
+    // Зчитуємо акцентний колір з пам'яті
+    const [accentColor, setAccentColor] = useState(() => {
+        return localStorage.getItem('site_accent_color') || 'purple';
+    });
+
+    // Слідкуємо за змінами (на випадок оновлення в іншій вкладці або перезавантаження)
+    useEffect(() => {
+        const handleStorageChange = () => {
+            setAccentColor(localStorage.getItem('site_accent_color') || 'purple');
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        // Також додамо слухач на кастомну подію, якщо ви захочете зробити миттєве оновлення без перезагрузки
+        window.addEventListener('accent-color-change', handleStorageChange);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('accent-color-change', handleStorageChange);
+        };
+    }, []);
+
     return (
-        <header className="fixed z-50 top-0 w-full h-16 bg-gray-950 text-white shadow-lg">
+        <header className="fixed z-50 top-0 w-full h-16 bg-white dark:bg-gray-950 text-gray-900 dark:text-white shadow-lg transition-colors duration-300">
             <div className="px-6 py-4 flex items-center justify-between">
                 {/* Logo / Brand */}
                 <Link
                     to="/"
-                    className="text-4xl font-bold text-purple-600 hover:text-purple-700 transition-colors ml-16"
+                    className={`text-4xl font-bold text-${accentColor}-600 hover:text-${accentColor}-700 transition-colors ml-16`}
                 >
                     PAX
                 </Link>
@@ -32,28 +53,31 @@ export const Header: React.FC<HeaderProps> = ({ isAuthenticated }) => {
                 {/* Auth buttons / User Profile */}
                 <div className="hidden md:flex space-x-3 items-center">
 
-                    {/* если не залогинин то не показывает*/}
+                    {/* якщо не залогінений */}
                     {!isAuthenticated && (
                         <>
-                            <Link
+                            <Link onClick={login}
                                 to="/signin"
-                                className="px-4 py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 transition"
+                                className={`px-4 py-2 border border-${accentColor}-600 text-${accentColor}-600 rounded-lg hover:bg-${accentColor}-50 dark:hover:bg-${accentColor}-900/20 transition`}
                             >
                                 Sign In
                             </Link>
-                            <Link
+                            <Link onClick={login}
                                 to="/signup"
-                                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                                className={`px-4 py-2 bg-${accentColor}-600 text-white rounded-lg hover:opacity-90 transition`}
                             >
                                 Sign Up
                             </Link>
                         </>
                     )}
 
-                    {/* если заполнино, то показывает настройки */}
+                    {/* якщо заповнено, то показує налаштування */}
                     {isAuthenticated && (
-                        <Link to="/settings" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-800 transition">
-                            <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white">
+                        <Link
+                            to="/settings"
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                        >
+                            <div className={`w-8 h-8 bg-${accentColor}-600 rounded-full flex items-center justify-center text-white`}>
                                 <User size={20} />
                             </div>
                             <span className="text-sm font-medium">My Profile</span>
@@ -62,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({ isAuthenticated }) => {
                 </div>
 
                 {/* Mobile menu icon */}
-                <button className="md:hidden flex items-center text-white hover:text-purple-600 transition">
+                <button className={`md:hidden flex items-center text-gray-900 dark:text-white hover:text-${accentColor}-600 transition`}>
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-6 w-6"

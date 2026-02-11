@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, Send, MoreVertical, Phone, Video, Paperclip, Smile, Image, Check, CheckCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Send, MoreVertical, Phone, Video, Paperclip, Smile, Image as ImageIcon, Check, CheckCheck } from 'lucide-react';
 
 interface Message {
     id: number;
@@ -21,6 +21,26 @@ interface Conversation {
 }
 
 export const MessagesPage: React.FC = () => {
+    // --- ЛОГІКА КОЛЬОРІВ ---
+    const [accentColor, setAccentColor] = useState(() => {
+        return localStorage.getItem('site_accent_color') || 'purple';
+    });
+
+    useEffect(() => {
+        const handleStorageChange = () => {
+            setAccentColor(localStorage.getItem('site_accent_color') || 'purple');
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('accent-color-change', handleStorageChange);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('accent-color-change', handleStorageChange);
+        };
+    }, []);
+    // -----------------------
+
     const [selectedChat, setSelectedChat] = useState(1);
     const [messageInput, setMessageInput] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
@@ -143,7 +163,6 @@ export const MessagesPage: React.FC = () => {
 
     const handleSendMessage = () => {
         if (messageInput.trim()) {
-            // Handle sending message logic here
             console.log('Sending:', messageInput);
             setMessageInput('');
         }
@@ -152,11 +171,11 @@ export const MessagesPage: React.FC = () => {
     const selectedConversation = conversations.find(c => c.id === selectedChat);
 
     return (
-        <div className="h-[calc(100vh-7rem)] flex gap-4">
+        <div className="h-[calc(100vh-7rem)] flex gap-4 max-w-7xl mx-auto">
             {/* Conversations List */}
-            <div className="w-80 bg-gray-800/30 border border-gray-700/50 rounded-xl flex flex-col overflow-hidden">
+            <div className="w-80 bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-xl flex flex-col overflow-hidden transition-colors shadow-sm">
                 {/* Search Header */}
-                <div className="p-4 border-b border-gray-700/50">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700/50">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                         <input
@@ -164,7 +183,7 @@ export const MessagesPage: React.FC = () => {
                             placeholder="Search conversations..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-gray-900/50 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
+                            className={`w-full bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-${accentColor}-500 transition-colors`}
                         />
                     </div>
                 </div>
@@ -175,12 +194,14 @@ export const MessagesPage: React.FC = () => {
                         <button
                             key={conv.id}
                             onClick={() => setSelectedChat(conv.id)}
-                            className={`w-full flex items-center gap-3 p-4 border-b border-gray-700/30 hover:bg-gray-700/30 transition-colors ${
-                                selectedChat === conv.id ? 'bg-gray-700/50' : ''
+                            className={`w-full flex items-center gap-3 p-4 border-b border-gray-100 dark:border-gray-700/30 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors ${
+                                selectedChat === conv.id
+                                    ? `bg-${accentColor}-50 dark:bg-${accentColor}-900/10`
+                                    : ''
                             }`}
                         >
                             <div className="relative flex-shrink-0">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white ${
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${
                                     conv.id === 5 ? 'bg-gradient-to-br from-green-500 to-emerald-600' :
                                         conv.id % 3 === 0 ? 'bg-gradient-to-br from-blue-500 to-cyan-600' :
                                             conv.id % 2 === 0 ? 'bg-gradient-to-br from-purple-500 to-pink-600' :
@@ -189,18 +210,20 @@ export const MessagesPage: React.FC = () => {
                                     {conv.avatar}
                                 </div>
                                 {conv.online && (
-                                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-gray-800 rounded-full" />
+                                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full" />
                                 )}
                             </div>
                             <div className="flex-1 min-w-0 text-left">
                                 <div className="flex items-center justify-between mb-1">
-                                    <h3 className="font-semibold text-white truncate">{conv.name}</h3>
-                                    <span className="text-xs text-gray-400 flex-shrink-0">{conv.time}</span>
+                                    <h3 className={`font-semibold text-gray-900 dark:text-white truncate ${selectedChat === conv.id ? `text-${accentColor}-700 dark:text-${accentColor}-300` : ''}`}>
+                                        {conv.name}
+                                    </h3>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{conv.time}</span>
                                 </div>
-                                <p className="text-sm text-gray-400 truncate">{conv.lastMessage}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{conv.lastMessage}</p>
                             </div>
                             {conv.unread > 0 && (
-                                <div className="flex-shrink-0 w-5 h-5 bg-purple-600 rounded-full flex items-center justify-center">
+                                <div className={`flex-shrink-0 w-5 h-5 bg-${accentColor}-600 rounded-full flex items-center justify-center shadow-sm`}>
                                     <span className="text-xs font-bold text-white">{conv.unread}</span>
                                 </div>
                             )}
@@ -210,40 +233,40 @@ export const MessagesPage: React.FC = () => {
             </div>
 
             {/* Chat Area */}
-            <div className="flex-1 bg-gray-800/30 border border-gray-700/50 rounded-xl flex flex-col overflow-hidden">
+            <div className="flex-1 bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-xl flex flex-col overflow-hidden transition-colors shadow-sm">
                 {/* Chat Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-700/50">
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700/50">
                     <div className="flex items-center gap-3">
                         <div className="relative">
-                            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center font-bold text-white">
+                            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center font-bold text-white shadow-sm">
                                 {selectedConversation?.avatar}
                             </div>
                             {selectedConversation?.online && (
-                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-gray-800 rounded-full" />
+                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full" />
                             )}
                         </div>
                         <div>
-                            <h2 className="font-semibold text-white">{selectedConversation?.name}</h2>
-                            <p className="text-xs text-gray-400">
+                            <h2 className="font-semibold text-gray-900 dark:text-white">{selectedConversation?.name}</h2>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                                 {selectedConversation?.online ? 'Active now' : 'Offline'}
                             </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button className="w-10 h-10 flex items-center justify-center hover:bg-gray-700/50 rounded-lg transition-colors text-gray-400 hover:text-white">
+                        <button className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                             <Phone size={20} />
                         </button>
-                        <button className="w-10 h-10 flex items-center justify-center hover:bg-gray-700/50 rounded-lg transition-colors text-gray-400 hover:text-white">
+                        <button className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                             <Video size={20} />
                         </button>
-                        <button className="w-10 h-10 flex items-center justify-center hover:bg-gray-700/50 rounded-lg transition-colors text-gray-400 hover:text-white">
+                        <button className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                             <MoreVertical size={20} />
                         </button>
                     </div>
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 dark:bg-transparent">
                     {messages.map((message) => (
                         <div
                             key={message.id}
@@ -251,10 +274,10 @@ export const MessagesPage: React.FC = () => {
                         >
                             <div className={`max-w-md ${message.isSent ? 'order-2' : 'order-1'}`}>
                                 <div
-                                    className={`rounded-2xl px-4 py-3 ${
+                                    className={`rounded-2xl px-4 py-3 shadow-sm ${
                                         message.isSent
-                                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
-                                            : 'bg-gray-700/50 text-white'
+                                            ? `bg-${accentColor}-600 text-white`
+                                            : 'bg-white dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-transparent'
                                     }`}
                                 >
                                     <p className="text-sm leading-relaxed">{message.content}</p>
@@ -262,12 +285,12 @@ export const MessagesPage: React.FC = () => {
                                 <div className={`flex items-center gap-1 mt-1 px-2 ${
                                     message.isSent ? 'justify-end' : 'justify-start'
                                 }`}>
-                                    <span className="text-xs text-gray-500">{message.time}</span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">{message.time}</span>
                                     {message.isSent && (
                                         message.isRead ? (
-                                            <CheckCheck size={14} className="text-purple-400" />
+                                            <CheckCheck size={14} className={`text-${accentColor}-600 dark:text-${accentColor}-400`} />
                                         ) : (
-                                            <Check size={14} className="text-gray-500" />
+                                            <Check size={14} className="text-gray-400" />
                                         )
                                     )}
                                 </div>
@@ -277,14 +300,14 @@ export const MessagesPage: React.FC = () => {
                 </div>
 
                 {/* Input Area */}
-                <div className="p-4 border-t border-gray-700/50">
+                <div className="p-4 border-t border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-800/30">
                     <div className="flex items-end gap-3">
                         <div className="flex gap-2">
-                            <button className="w-10 h-10 flex items-center justify-center hover:bg-gray-700/50 rounded-lg transition-colors text-gray-400 hover:text-white">
+                            <button className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                                 <Paperclip size={20} />
                             </button>
-                            <button className="w-10 h-10 flex items-center justify-center hover:bg-gray-700/50 rounded-lg transition-colors text-gray-400 hover:text-white">
-                                <Image size={20} />
+                            <button className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                                <ImageIcon size={20} />
                             </button>
                         </div>
                         <div className="flex-1 relative">
@@ -299,15 +322,15 @@ export const MessagesPage: React.FC = () => {
                                 }}
                                 placeholder="Type a message..."
                                 rows={1}
-                                className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors resize-none"
+                                className={`w-full bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 pr-12 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-${accentColor}-500 transition-colors resize-none`}
                             />
-                            <button className="absolute right-3 bottom-3 text-gray-400 hover:text-white transition-colors">
+                            <button className="absolute right-3 bottom-3 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
                                 <Smile size={20} />
                             </button>
                         </div>
                         <button
                             onClick={handleSendMessage}
-                            className="w-12 h-12 flex items-center justify-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-lg transition-all shadow-lg shadow-purple-500/20"
+                            className={`w-12 h-12 flex items-center justify-center bg-${accentColor}-600 hover:bg-${accentColor}-700 rounded-lg transition-all shadow-lg shadow-${accentColor}-500/20`}
                         >
                             <Send size={20} className="text-white" />
                         </button>
