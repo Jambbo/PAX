@@ -7,6 +7,31 @@ const App: React.FC = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+    // --- 1. ІНІЦІАЛІЗАЦІЯ ТЕМИ ПРИ ЗАПУСКУ ---
+    useEffect(() => {
+        const initTheme = () => {
+            // Зчитуємо тему (за замовчуванням Dark)
+            const savedTheme = localStorage.getItem('site_theme') || 'Dark';
+            const root = window.document.documentElement;
+
+            // Спочатку очищаємо клас
+            root.classList.remove('dark');
+
+            // Застосовуємо логіку
+            if (savedTheme === 'Dark') {
+                root.classList.add('dark');
+            } else if (savedTheme === 'Auto') {
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    root.classList.add('dark');
+                }
+            }
+            // Якщо Light, то клас dark не додаємо
+        };
+
+        initTheme();
+    }, []);
+  
+    // --- 2. ПЕРЕВІРКА АВТОРИЗАЦІЇ ---
     useEffect(() => {
         const token = localStorage.getItem('token') || localStorage.getItem('access_token');
         if (token) {
@@ -21,8 +46,10 @@ const App: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-950">
-            {}
+        // --- 3. АДАПТИВНИЙ ФОН ТА КОЛІР ТЕКСТУ ---
+        // bg-gray-50 (світлий) / dark:bg-gray-950 (темний)
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white transition-colors duration-300">
+
             <Header isAuthenticated={isAuthenticated} />
 
             <Sidebar

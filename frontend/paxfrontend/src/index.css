@@ -6,3 +6,7 @@
 #root {
   min-height: 100vh;
 }
+
+body {
+    @apply bg-gray-50 dark:bg-[#0b0b15];
+}

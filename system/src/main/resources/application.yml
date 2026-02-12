@@ -3,7 +3,7 @@ server:
 
 spring:
   config:
-    import: optional:file:.env[.properties],optional:file:system/.env[.properties]
+    import: optional:file:..env[.properties],optional:file:system/..env[.properties]
   datasource:
     url: jdbc:postgresql://${HOST}/${POSTGRES_DB}?currentSchema=${POSTGRES_SCHEMA}
     username: ${POSTGRES_USER}
