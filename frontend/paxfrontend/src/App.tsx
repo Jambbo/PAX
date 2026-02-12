@@ -7,7 +7,7 @@ const App: React.FC = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    // --- 1. ІНІЦІАЛІЗАЦІЯ ТЕМИ ПРИ ЗАПУСКУ ---
+    // --- 1. ДОДАНО: Ініціалізація теми з основного коду ---
     useEffect(() => {
         const initTheme = () => {
             // Зчитуємо тему (за замовчуванням Dark)
@@ -30,9 +30,8 @@ const App: React.FC = () => {
 
         initTheme();
     }, []);
-    // -----------------------------------------
+    // -----------------------------------------------------
 
-    // --- 2. ПЕРЕВІРКА АВТОРИЗАЦІЇ ---
     useEffect(() => {
         const token = localStorage.getItem('token') || localStorage.getItem('access_token');
         if (token) {
@@ -47,8 +46,7 @@ const App: React.FC = () => {
     };
 
     return (
-        // --- 3. АДАПТИВНИЙ ФОН ТА КОЛІР ТЕКСТУ ---
-        // bg-gray-50 (світлий) / dark:bg-gray-950 (темний)
+        // --- 2. ДОДАНО: Стилі обгортки з основного коду (адаптивність) ---
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white transition-colors duration-300">
 
             <Header isAuthenticated={isAuthenticated} />

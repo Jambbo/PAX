@@ -1,73 +1,59 @@
-version: '3.8'
-
 networks:
   system-pax:
     driver: bridge
 
+volumes:
+  db-data:
+    driver: local
+
+
 services:
-  # 1. Основна база даних
   postgres:
     image: 'postgres:17.5-alpine'
     ports:
       - '5435:5432'
     env_file:
-      - system/.env
-    environment:
-      POSTGRES_DB: system_db
-      # Використовуємо змінні, або дефолтні значення, якщо змінна не знайдена
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-    networks:
-      - system-pax
+      - ./system/.env
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
       timeout: 5s
       retries: 20
 
-  # 2. База даних для Keycloak
   pax-keycloak-postgres:
     image: postgres:17.5-alpine
     container_name: pax-keycloak-postgres
-    env_file:
-      - system/.env
     environment:
-      POSTGRES_DB: keycloak
       POSTGRES_USER: ${KC_DB_USERNAME}
       POSTGRES_PASSWORD: ${KC_DB_PASSWORD}
+      POSTGRES_DB: keycloak
+    #    env_file:
+    #      - ./system/.env
     ports:
       - "5433:5432"
-    networks:
-      - system-pax
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${KC_DB_USERNAME} -d keycloak" ]
+      test: [ "CMD-SHELL", "pg_isready -U keycloak" ]
       interval: 10s
       timeout: 5s
       retries: 20
 
-  # 3. Keycloak
   pax-keycloak:
     image: quay.io/keycloak/keycloak:26.2
     container_name: pax-keycloak
     command: start-dev --metrics-enabled=true
-    env_file:
-      - system/.env
     ports:
       - "8080:8080"
       - "9000:9000"
-    networks:
-      - system-pax
     environment:
+      JAVA_OPTS: -Dkeycloak.migration.usersExportStrategy=REALM_FILE
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
       KC_DB: postgres
       KC_DB_URL: ${KC_DB_URL}
       KC_DB_USERNAME: ${KC_DB_USERNAME}
       KC_DB_PASSWORD: ${KC_DB_PASSWORD}
-      KC_HOSTNAME: localhost
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
       KC_METRICS_ENABLED: "true"
       KC_HEALTH_ENABLED: "true"
-      JAVA_OPTS: -Dkeycloak.migration.usersExportStrategy=REALM_FILE
     depends_on:
       pax-keycloak-postgres:
         condition: service_healthy
