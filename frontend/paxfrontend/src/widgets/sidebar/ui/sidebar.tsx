@@ -15,6 +15,7 @@ import {
     Calendar
 } from "lucide-react";
 import {Link} from "react-router-dom";
+import {logout} from "../../../features/Auth/authService";
 
 interface SidebarProps {
     isOpen: boolean;
@@ -27,13 +28,14 @@ export const Sidebar: React.FC<SidebarProps> = ({isOpen, toggleMenu, isAuthentic
     const [activeItem, setActiveItem] = useState("home");
 
     const menuItems = [
-        {id: "home", icon: Home, label: "Home", badge: null},
-        {id: "messages", icon: MessageSquare, label: "Messages", badge: "24"},
-        {id: "trending", icon: TrendingUp, label: "Trending", badge: 2},
-        {id: "groups", icon: Users, label: "Groups", badge: null},
-        {id: "bookmarks", icon: Bookmark, label: "Bookmarks", badge: null},
-        {id: "notifications", icon: Bell, label: "Notifications", badge: "5"},
+        { id: "home", path: "/", icon: Home, label: "Home", badge: null },
+        { id: "messages", path: "/messages", icon: MessageSquare, label: "Messages", badge: "24" },
+        { id: "trending", path: "/trending", icon: TrendingUp, label: "Trending", badge: 2 },
+        { id: "groups", path: "/groups", icon: Users, label: "Groups", badge: null },
+        { id: "bookmarks", path: "/bookmarks", icon: Bookmark, label: "Bookmarks", badge: null },
+        { id: "notifications", path: "/notifications", icon: Bell, label: "Notifications", badge: "5" },
     ];
+
 
     const quickLinks = [
         {id: "general", icon: Hash, label: "General", color: "text-blue-400"},
@@ -143,7 +145,7 @@ export const Sidebar: React.FC<SidebarProps> = ({isOpen, toggleMenu, isAuthentic
 
                 {/*  ну и когда мы залогинены, то должна появится кнопка*/}
                 {isAuthenticated && (
-                    <button
+                    <button onClick={logout}
                         className="w-full flex items-center gap-3 px-3 py-3 rounded-lg bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white transition-all duration-200 shadow-lg shadow-red-500/20">
                         <LogOut size={20} className="flex-shrink-0"/>
                         {isOpen && <span className="text-sm font-medium">Logout</span>}

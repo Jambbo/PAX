@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Search } from "./search";
 import { User } from "lucide-react";
+import {login} from "../../../features/Auth/authService";
 
 
 interface HeaderProps {
@@ -21,27 +22,27 @@ export const Header: React.FC<HeaderProps> = ({ isAuthenticated }) => {
                     PAX
                 </Link>
 
-                <div className="md:block hidden flex-1 ml-48 mr-auto items-center">
+                <div className="block flex-1 ml-48 mr-auto items-center">
                     <Search/>
                 </div>
 
                 {/* Navigation */}
-                <nav className="hidden md:flex space-x-6">
+                <nav className="flex space-x-6">
                 </nav>
 
                 {/* Auth buttons / User Profile */}
-                <div className="hidden md:flex space-x-3 items-center">
+                <div className="flex space-x-3 items-center">
 
                     {/* если не залогинин то не показывает*/}
                     {!isAuthenticated && (
                         <>
-                            <Link
+                            <Link onClick={login}
                                 to="/signin"
                                 className="px-4 py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 transition"
                             >
                                 Sign In
                             </Link>
-                            <Link
+                            <Link onClick={login}
                                 to="/signup"
                                 className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
                             >
@@ -62,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({ isAuthenticated }) => {
                 </div>
 
                 {/* Mobile menu icon */}
-                <button className="md:hidden flex items-center text-white hover:text-purple-600 transition">
+                <button className="flex items-center text-white hover:text-purple-600 transition">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-6 w-6"

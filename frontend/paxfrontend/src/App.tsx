@@ -8,7 +8,7 @@ const App: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
-        const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+        const token = localStorage.getItem('token') || localStorage.getItem('access_token');
         if (token) {
             setIsAuthenticated(true);
         } else {
