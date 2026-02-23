@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Send, MoreVertical, Phone, Video, Paperclip, Smile, Image as ImageIcon, Check, CheckCheck } from 'lucide-react';
+import { Search, Send, MoreVertical, Phone, Video, Paperclip, Smile, Image as ImageIcon, Check, CheckCheck, Plus } from 'lucide-react';
 
 interface Message {
     id: number;
@@ -173,20 +173,32 @@ export const MessagesPage: React.FC = () => {
     return (
         <div className="h-[calc(100vh-7rem)] flex gap-4 max-w-7xl mx-auto">
             {/* Conversations List */}
-            <div className="w-80 bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-xl flex flex-col overflow-hidden transition-colors shadow-sm">
+            <div className="w-80 bg-gray-800/30 border border-gray-700/50 rounded-xl flex flex-col overflow-hidden">
                 {/* Search Header */}
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700/50">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Search conversations..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className={`w-full bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-${accentColor}-500 transition-colors`}
-                        />
+                <div className="p-4 border-b border-gray-700/50">
+                    <div className="flex items-center gap-2">
+                        {/*Search*/}
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Search conversations..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full bg-gray-900/50 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
+                            />
+                        </div>
+                        <div>
+                            <button className="h-10 w-10 flex items-center justify-center rounded-lg
+                      bg-purple-600 hover:bg-purple-500 transition-colors
+                      text-white text-xl font-semibold
+                      relative top-[-1px]">
+                                <Plus size={18} />
+                            </button>
+                        </div>
                     </div>
                 </div>
+
 
                 {/* Conversations */}
                 <div className="flex-1 overflow-y-auto">
