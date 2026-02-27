@@ -1,5 +1,6 @@
 package com.example.system.rest.security;
 
+import com.example.system.repository.GroupRepository;
 import com.example.system.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -12,10 +13,15 @@ import org.springframework.stereotype.Service;
 public class OwnershipService implements SecurityService {
 
     private final PostRepository postRepository;
+    private final GroupRepository groupRepository;
 
     public boolean isOwner(Long postId) {
         return postRepository.existsByIdAndAuthorId(postId, getCurrentUserId());
 
+    }
+
+    public boolean isGroupOwner(Long groupId){
+        return groupRepository.existsByIdAndOwnerId(groupId, getCurrentUserId());
     }
 
     @Override

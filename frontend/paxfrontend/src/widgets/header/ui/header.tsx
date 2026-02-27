@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Search } from "./search";
 import { User } from "lucide-react";
+import {login} from "../../../features/Auth/authService";
 
 
 interface HeaderProps {
@@ -37,12 +38,14 @@ export const Header: React.FC<HeaderProps> = ({ isAuthenticated }) => {
                         <>
                             <Link
                                 to="/signin"
+                                onClick={login}
                                 className="px-4 py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 transition"
                             >
                                 Sign In
                             </Link>
                             <Link
                                 to="/signup"
+                                onClick={login}
                                 className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
                             >
                                 Sign Up
