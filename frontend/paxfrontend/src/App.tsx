@@ -7,8 +7,33 @@ const App: React.FC = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+    // --- 1. ДОДАНО: Ініціалізація теми з основного коду ---
     useEffect(() => {
-        const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+        const initTheme = () => {
+            // Зчитуємо тему (за замовчуванням Dark)
+            const savedTheme = localStorage.getItem('site_theme') || 'Dark';
+            const root = window.document.documentElement;
+
+            // Спочатку очищаємо клас
+            root.classList.remove('dark');
+
+            // Застосовуємо логіку
+            if (savedTheme === 'Dark') {
+                root.classList.add('dark');
+            } else if (savedTheme === 'Auto') {
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    root.classList.add('dark');
+                }
+            }
+            // Якщо Light, то клас dark не додаємо
+        };
+
+        initTheme();
+    }, []);
+    // -----------------------------------------------------
+
+    useEffect(() => {
+        const token = localStorage.getItem('token') || localStorage.getItem('access_token');
         if (token) {
             setIsAuthenticated(true);
         } else {
@@ -21,8 +46,9 @@ const App: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-950">
-            {}
+        // --- 2. ДОДАНО: Стилі обгортки з основного коду (адаптивність) ---
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white transition-colors duration-300">
+
             <Header isAuthenticated={isAuthenticated} />
 
             <Sidebar
