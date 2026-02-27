@@ -12,7 +12,7 @@ public record PostWriteDto(
         @NotNull(message = "id is must be not null.", groups = OnUpdate.class)
         Long id,
 
-        @NotBlank(message = "text is must be not null.", groups = OnCreate.class)
+        @NotBlank(message = "text must be not null.", groups = OnCreate.class)
         @Length(
                 max = 200,
                 message = "text must be maximum {max} characters.",
