@@ -407,15 +407,15 @@ export const ProfilePage: React.FC = () => {
     const [isEditOpen, setIsEditOpen] = useState(false);
 
     const [profile, setProfile] = useState<UserProfile>({
-        name: 'Alexander Mitchell',
-        username: 'alexmitchell',
+        name: 'John Pax',
+        username: 'JPax',
         avatar: 'AM',
         bannerGradient: 'from-indigo-500 via-purple-500 to-pink-500',
         bio: 'Full-stack developer & open-source enthusiast. Building products that make a difference. Love sharing knowledge and helping others grow in tech.',
         location: 'San Francisco, CA',
         website: 'https://johnPax.dev',
         joinDate: 'January 2023',
-        email: 'alex@example.com',
+        email: 'john@example.com',
         isVerified: true,
         isOnline: true,
         stats: {
