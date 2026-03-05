@@ -7,7 +7,9 @@ import { TrendingPage } from "../pages/trending";
 import { GroupsPage } from "../pages/groups";
 import { BookmarksPage } from "../pages/bookmarks";
 import { NotificationsPage } from "../pages/notifications";
+import { ProfilePage} from "../pages/profile/ui/profilePage";
 import { AuthCallback } from "../features/Auth/AuthCallback";
+
 
 export const router = createBrowserRouter([
     {
@@ -22,6 +24,7 @@ export const router = createBrowserRouter([
             { path: "groups", element: <GroupsPage /> },
             { path: "bookmarks", element: <BookmarksPage /> },
             { path: "notifications", element: <NotificationsPage /> }, // ← добавлено
+            {path: "profile", element: <ProfilePage />},
 
             { path: "settings", element: <SettingsPage /> },
 
