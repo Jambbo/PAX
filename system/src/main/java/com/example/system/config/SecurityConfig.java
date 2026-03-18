@@ -76,7 +76,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(configurer ->
                         configurer.requestMatchers(
                                         "/public/**",
-                                        "/actuator/**")
+                                        "/actuator/**",
+                                        "/api/v1/groups/all",
+                                        "/api/v1/posts/all"
+                                )
                                 .permitAll()
                                 .anyRequest()
                                 .authenticated())

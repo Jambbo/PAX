@@ -51,14 +51,6 @@ public class User {
     @UpdateTimestamp
     LocalDateTime updatedAt;
 
-    @OneToMany
-    @JoinTable(
-            name = "users_posts",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "post_id")
-    )
-    List<Post> posts;
-
     @ManyToMany(mappedBy = "members")
     Set<Group> groups = new HashSet<>();
 

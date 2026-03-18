@@ -2,6 +2,7 @@ package com.example.system.service.post;
 
 import com.example.system.domain.model.Post;
 import com.example.system.repository.PostRepository;
+import com.example.system.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,10 +14,11 @@ import java.util.List;
 public class PostServiceImpl implements PostService {
 
     private final PostRepository postRepository;
+    private final UserService userService;
 
     @Override
     @Transactional
-    public Post createPost(Post post) {
+    public Post createPost(Post post, String ownerId) {
         // Initialize views and likes to 0 if null
         if (post.getViews() == null) {
             post.setViews(0L);
@@ -24,6 +26,9 @@ public class PostServiceImpl implements PostService {
         if (post.getLikes() == null) {
             post.setLikes(0L);
         }
+
+        post.setAuthor(userService.findUserById(ownerId));
+
         return postRepository.save(post);
     }
 

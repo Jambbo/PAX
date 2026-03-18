@@ -44,7 +44,7 @@ public class GroupController {
         return ResponseEntity.ok(groupMapper.toDto(group));
     }
 
-    @GetMapping
+    @GetMapping("/all")
     public ResponseEntity<List<GroupReadResponseDto>> getAll() {
         List<Group> groups = groupService.getAll();
         return ResponseEntity.ok(groupMapper.toDto(groups));

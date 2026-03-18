@@ -11,7 +11,7 @@ public record PostReadResponseDto(
         String text,
         Long views,
         Long likes,
-        Long authorId,
+        String authorId,
         Long groupId,
         List<String> images,
         String createdAt,

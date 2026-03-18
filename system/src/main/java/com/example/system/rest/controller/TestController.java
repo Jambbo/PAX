@@ -20,6 +20,7 @@ public class TestController {
         result.put("email", jwt.getClaims().get("email"));
         result.put("username", jwt.getClaims().get("preferred_username"));
         result.put("claims", jwt.getClaims());
+        result.put("token", jwt.getTokenValue());
         return result;
     }
 
