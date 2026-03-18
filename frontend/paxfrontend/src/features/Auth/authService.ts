@@ -1,14 +1,22 @@
+import { generatePKCE } from "./pkce";
+
 const KEYCLOAK_URL = "http://localhost:8080";
 const REALM = "pax";
 const CLIENT_ID = "pax-frontend";
 const REDIRECT_URI = "http://localhost:3000/auth/callback";
 
-export function login() {
+export async function login() {
+
+    const { codeVerifier, codeChallenge } = await generatePKCE();
+    localStorage.setItem("pkce_code_verifier", codeVerifier);
+
     const params = new URLSearchParams({
         client_id: CLIENT_ID,
         response_type: "code",
         scope: "openid profile email",
         redirect_uri: REDIRECT_URI,
+        code_challenge: codeChallenge,
+        code_challenge_method: "S256",
     });
 
     window.location.href =
