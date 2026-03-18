@@ -9,9 +9,11 @@ import com.example.system.rest.validation.OnUpdate;
 import com.example.system.service.post.PostService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,9 +28,10 @@ public class PostController {
 
     @PostMapping
     public ResponseEntity<PostReadResponseDto> create(
-            @Validated(OnCreate.class) @RequestBody PostWriteDto postWriteDto) {
+            @Validated(OnCreate.class) @RequestBody PostWriteDto postWriteDto,
+            @AuthenticationPrincipal Jwt jwt) {
         Post post = postMapper.toEntity(postWriteDto);
-        PostReadResponseDto dto = postMapper.toDto(postService.createPost(post));
+        PostReadResponseDto dto = postMapper.toDto(postService.createPost(post,jwt.getSubject()));
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 
@@ -39,7 +42,7 @@ public class PostController {
         return ResponseEntity.ok(dto);
     }
 
-    @GetMapping
+    @GetMapping("/all")
     public ResponseEntity<List<PostReadResponseDto>> getAll() {
         List<Post> posts = postService.getAllPosts();
         List<PostReadResponseDto> dtos = postMapper.toDto(posts);

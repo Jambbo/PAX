@@ -9,7 +9,6 @@ export async function login() {
 
     const { codeVerifier, codeChallenge } = await generatePKCE();
     localStorage.setItem("pkce_code_verifier", codeVerifier);
-
     const params = new URLSearchParams({
         client_id: CLIENT_ID,
         response_type: "code",
