@@ -18,4 +18,7 @@ public interface GroupService {
 
     List<Group> getByOwner(String ownerId);
 
+    void joinUser(Long groupId, String userId);
+
+    void leaveUser(Long groupId, String userId);
 }

@@ -44,10 +44,39 @@ public class GroupController {
         return ResponseEntity.ok(groupMapper.toDto(group));
     }
 
+    @PostMapping("/{groupId}/join")
+    public ResponseEntity<Void> join(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        groupService.joinUser(groupId, jwt.getSubject());
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/all")
-    public ResponseEntity<List<GroupReadResponseDto>> getAll() {
+    public ResponseEntity<List<GroupReadResponseDto>> getAll(@AuthenticationPrincipal Jwt jwt) {
         List<Group> groups = groupService.getAll();
-        return ResponseEntity.ok(groupMapper.toDto(groups));
+        List<GroupReadResponseDto> dtos = groupMapper.toDto(groups);
+
+        if (jwt != null) {
+            String currentUserId = jwt.getSubject();
+            // Проходимо по кожній групі і перевіряємо, чи є там наш ID
+            for (int i = 0; i < groups.size(); i++) {
+                boolean isMember = groups.get(i).getMembers().stream()
+                        .anyMatch(u -> u.getId().equals(currentUserId));
+                dtos.get(i).setJoined(isMember);
+            }
+        }
+        return ResponseEntity.ok(dtos);
+    }
+
+    @PostMapping("/{groupId}/leave")
+    public ResponseEntity<Void> leave(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        groupService.leaveUser(groupId, jwt.getSubject());
+        return ResponseEntity.ok().build();
     }
 
     @PreAuthorize("@ownership.isGroupOwner(#groupId)")

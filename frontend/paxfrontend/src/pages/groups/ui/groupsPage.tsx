@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fetchAllGroups, createGroup, joinGroup, leaveGroup } from '../groupsService';
 import {
     Users,
     Search,
@@ -19,7 +20,6 @@ import {
     CreateCommunityModal,
     CreateCommunityFormData
 } from "../createCommunity";
-import { fetchAllGroups, createGroup } from '../groupsService';
 
 export const GroupsPage: React.FC = () => {
     // --- COLOR LOGIC ---
@@ -44,120 +44,44 @@ export const GroupsPage: React.FC = () => {
 
     const [activeTab, setActiveTab] = useState<'discover' | 'joined' | 'popular'>('discover');
     const [searchQuery, setSearchQuery] = useState('');
-    const [communities, setCommunities] = useState<Community[]>([
-        {
-            id: 1,
-            name: "Tech Enthusiasts",
-            description: "A community for developers, designers, and tech lovers to share knowledge, projects, and innovations.",
-            avatar: "TE",
-            banner: "from-blue-500 to-cyan-600",
-            members: 12450,
-            posts: 8934,
-            category: "Technology",
-            isPrivate: false,
-            isJoined: true,
-            isVerified: true,
-            onlineMembers: 234
-        },
-        {
-            id: 2,
-            name: "Creative Studio",
-            description: "Share your art, get feedback, and connect with fellow artists. All forms of creativity welcome!",
-            avatar: "CS",
-            banner: "from-purple-500 to-pink-600",
-            members: 8920,
-            posts: 15678,
-            category: "Art & Design",
-            isPrivate: false,
-            isJoined: false,
-            isVerified: true,
-            onlineMembers: 156
-        },
-        {
-            id: 3,
-            name: "Fitness Warriors",
-            description: "Get fit, stay motivated, and achieve your health goals together. Share workouts, meal plans, and progress!",
-            avatar: "FW",
-            banner: "from-green-500 to-emerald-600",
-            members: 15670,
-            posts: 23456,
-            category: "Health & Fitness",
-            isPrivate: false,
-            isJoined: true,
-            isVerified: false,
-            onlineMembers: 389
-        },
-        {
-            id: 4,
-            name: "Book Club Elite",
-            description: "Private community for serious readers. Discuss literature, share recommendations, and join reading challenges.",
-            avatar: "BC",
-            banner: "from-orange-500 to-red-600",
-            members: 3420,
-            posts: 5678,
-            category: "Literature",
-            isPrivate: true,
-            isJoined: false,
-            isVerified: true,
-            onlineMembers: 45
-        },
-        {
-            id: 5,
-            name: "Gaming Legends",
-            description: "From casual to competitive - all gamers welcome! Share gameplay, strategies, and find teammates.",
-            avatar: "GL",
-            banner: "from-indigo-500 to-purple-600",
-            members: 23450,
-            posts: 45678,
-            category: "Gaming",
-            isPrivate: false,
-            isJoined: false,
-            isVerified: true,
-            onlineMembers: 567
-        },
-        {
-            id: 6,
-            name: "Startup Founders",
-            description: "Connect with entrepreneurs, share experiences, and get advice on building successful startups.",
-            avatar: "SF",
-            banner: "from-teal-500 to-cyan-600",
-            members: 6780,
-            posts: 4532,
-            category: "Business",
-            isPrivate: false,
-            isJoined: true,
-            isVerified: false,
-            onlineMembers: 89
-        },
-        {
-            id: 7,
-            name: "Music Producers",
-            description: "Share beats, get feedback on your tracks, and collaborate with producers worldwide.",
-            avatar: "MP",
-            banner: "from-pink-500 to-rose-600",
-            members: 9340,
-            posts: 12345,
-            category: "Music",
-            isPrivate: false,
-            isJoined: false,
-            isVerified: false,
-            onlineMembers: 178
-        },
-        {
-            id: 8,
-            name: "VIP Investors",
-            description: "Exclusive community for verified investors. Discuss strategies, market trends, and opportunities.",
-            avatar: "VI",
-            banner: "from-yellow-500 to-orange-600",
-            members: 1234,
-            posts: 2345,
-            category: "Finance",
-            isPrivate: true,
-            isJoined: false,
-            isVerified: true,
-            onlineMembers: 23
-        }
-    ]);
+    const [communities, setCommunities] = useState<Community[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Завантаження груп при старті сторінки
+    useEffect(() => {
+        const loadGroups = async () => {
+            setIsLoading(true);
+            try {
+                // Отримуємо групи з нашого бекенду
+                const backendGroups = await fetchAllGroups();
+
+                // Оскільки твій UI очікує поля типу avatar, banner, members (яких поки немає на бекенді),
+                // ми можемо додати їм дефолтні значення, щоб не ламався твій красивий дизайн
+                const formattedGroups = backendGroups.map(bg => ({
+                    id: bg.id,
+                    name: bg.name,
+                    description: bg.description,
+                    avatar: bg.name.substring(0, 2).toUpperCase(),
+                    banner: "from-purple-500 to-pink-600",
+                    members: bg.memberCount || 0, // Використовуй реальне число з бази
+                    posts: bg.postCount || 0,
+                    category: "General",
+                    // ОСЬ ТУТ ЗАМІСТЬ false СТАВИМО ДАНІ З БЕКЕНДУ
+                    isJoined: bg.joined || bg.isJoined || false,
+                    isVerified: false,
+                    onlineMembers: 1
+                }));
+
+                setCommunities(formattedGroups);
+            } catch (error) {
+                console.error("Помилка завантаження груп:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadGroups();
+    }, []);
 
     const [selectedCategory, setSelectedCategory] = useState("All Categories");
 
@@ -182,27 +106,77 @@ export const GroupsPage: React.FC = () => {
         setServerError(null);
 
         try {
-            console.log("Create community payload (to send to backend later):", data);
+            console.log("Відправляємо на бекенд:", data);
+
+            // 1. Готуємо дані для сервісу (мапимо поля)
+            const payload = {
+                name: data.name,
+                description: data.description,
+                // Перетворюємо 'public' -> 'PUBLIC' для Java Enum
+                groupPrivacy: data.visibility.toUpperCase() as any,
+                location: "" // Додаємо порожній рядок, бо в DTO є це поле
+            };
+
+            // 2. Викликаємо наш сервіс
+            const newBackendGroup = await createGroup(payload);
+
+            // 3. Форматуємо відповідь під твій UI (щоб картка з'явилася одразу)
+            const newCommunity: Community = {
+                id: newBackendGroup.id,
+                name: newBackendGroup.name,
+                description: newBackendGroup.description,
+                avatar: newBackendGroup.name.substring(0, 2).toUpperCase(),
+                banner: data.visibility === 'public' ? "from-blue-500 to-cyan-600" : "from-orange-500 to-red-600",
+                members: 1,
+                posts: 0,
+                category: data.category || "General",
+                isPrivate: data.visibility !== 'public',
+                isJoined: true,
+                isVerified: false,
+                onlineMembers: 1
+            };
+
             setIsCreateOpen(false);
-            // setCommunities(prev => [...prev, { ... }]);
-        } catch (err) {
-            setServerError("Failed to create community. Please try again.");
+            setCommunities(prev => [newCommunity, ...prev]);
+
+        } catch (err: any) {
+            setServerError("Не вдалося створити спільноту. Перевірте формат даних або сервер.");
+            console.error("Помилка при створенні:", err);
         } finally {
             setIsSubmitting(false);
         }
     };
-    // =================================================
 
-    const toggleJoin = (communityId: number) => {
-        setCommunities(communities.map(community =>
-            community.id === communityId
-                ? {
-                    ...community,
-                    isJoined: !community.isJoined,
-                    members: community.isJoined ? community.members - 1 : community.members + 1
-                }
-                : community
-        ));
+    const toggleJoin = async (communityId: number) => {
+        const token = localStorage.getItem("access_token");
+        if (!token) return;
+
+        // Знаходимо поточний стан групи
+        const community = communities.find(c => c.id === communityId);
+        if (!community) return;
+
+        try {
+            if (community.isJoined) {
+                // Якщо вже там — виходимо
+                await leaveGroup(communityId);
+            } else {
+                // Якщо ще ні — заходимо
+                await joinGroup(communityId);
+            }
+
+            // Оновлюємо UI (перемикаємо стан локально)
+            setCommunities(communities.map(c =>
+                c.id === communityId
+                    ? {
+                        ...c,
+                        isJoined: !c.isJoined,
+                        members: c.isJoined ? c.members - 1 : c.members + 1
+                    }
+                    : c
+            ));
+        } catch (err) {
+            console.error("Помилка:", err);
+        }
     };
 
     const filteredCommunities = communities.filter(community => {

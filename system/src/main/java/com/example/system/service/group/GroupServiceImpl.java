@@ -78,4 +78,45 @@ public class GroupServiceImpl implements GroupService {
     public List<Group> getByOwner(String ownerId) {
         return groupRepository.findByOwnerId(ownerId);
     }
+
+    @Override
+    @Transactional
+    public void joinUser(Long groupId, String userId) {
+        // 1. Шукаємо групу
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found with id=" + groupId));
+
+        // 2. Шукаємо користувача
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id=" + userId));
+
+        // 3. Перевіряємо, чи користувач вже є у групі (щоб не додавати двічі)
+        if (group.getMembers().contains(user)) {
+            return; // Або кинути помилку "Already a member"
+        }
+
+        // 4. Додаємо в список та оновлюємо лічильник
+        group.getMembers().add(user);
+        group.setMemberCount(group.getMemberCount() + 1);
+
+        // 5. Зберігаємо зміни
+        groupRepository.save(group);
+    }
+
+    @Override
+    @Transactional
+    public void leaveUser(Long groupId, String userId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Видаляємо юзера зі списку
+        if (group.getMembers().remove(user)) {
+            // Зменшуємо лічильник, тільки якщо він реально там був
+            group.setMemberCount(Math.max(0, group.getMemberCount() - 1));
+            groupRepository.save(group);
+        }
+    }
 }
