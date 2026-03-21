@@ -23,6 +23,14 @@ export async function login() {
 }
 
 export function logout() {
+
     localStorage.removeItem("access_token");
-    window.location.reload();
+
+
+    const logoutUrl = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/logout` +
+        `?client_id=${CLIENT_ID}` +
+        `&post_logout_redirect_uri=${encodeURIComponent("http://localhost:3000")}`;
+
+
+    window.location.href = logoutUrl;
 }

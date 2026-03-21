@@ -19,6 +19,7 @@ import {
     CreateCommunityModal,
     CreateCommunityFormData
 } from "../createCommunity";
+import { fetchAllGroups, createGroup } from '../groupsService';
 
 export const GroupsPage: React.FC = () => {
     // --- COLOR LOGIC ---

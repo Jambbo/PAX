@@ -1,14 +1,21 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 export const AuthCallback = () => {
     const navigate = useNavigate();
 
+    const isCalled = useRef(false);
+
     useEffect(() => {
+        if (isCalled.current) return;
+
         const params = new URLSearchParams(window.location.search);
         const code = params.get("code");
-        console.log(code);
+
         if (!code) return;
+
+
+        isCalled.current = true;
 
         const codeVerifier = localStorage.getItem("pkce_code_verifier");
 
@@ -32,10 +39,21 @@ export const AuthCallback = () => {
         })
             .then(res => res.json())
             .then(data => {
-                localStorage.setItem("access_token", data.access_token);
-                localStorage.removeItem("pkce_code_verifier")
-                navigate("/");
-            });
+
+                if (data.access_token) {
+                    localStorage.setItem("access_token", data.access_token);
+                    localStorage.removeItem("pkce_code_verifier");
+
+
+                    window.dispatchEvent(new Event("auth-change"));
+
+                    window.location.href = "/";
+                } else {
+                    console.error("Помилка отримання токена від Keycloak:", data);
+
+                }
+            })
+            .catch(err => console.error("Помилка мережі під час логіну:", err));
     }, [navigate]);
 
     return <div>Signing you in…</div>;

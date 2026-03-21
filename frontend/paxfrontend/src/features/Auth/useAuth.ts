@@ -6,11 +6,21 @@ export function useAuth() {
     );
 
     useEffect(() => {
-        const handler = () =>
-            setAuthenticated(Boolean(localStorage.getItem("access_token")));
+        const handler = () => {
+            const token = localStorage.getItem("access_token");
+
+            setAuthenticated(Boolean(token && token !== "undefined"));
+        };
+
 
         window.addEventListener("storage", handler);
-        return () => window.removeEventListener("storage", handler);
+
+        window.addEventListener("auth-change", handler);
+
+        return () => {
+            window.removeEventListener("storage", handler);
+            window.removeEventListener("auth-change", handler);
+        };
     }, []);
 
     return { authenticated };

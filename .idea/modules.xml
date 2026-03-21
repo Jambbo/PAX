@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/PAX_4.1.iml" filepath="$PROJECT_DIR$/.idea/PAX_4.1.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/system.main.iml" filepath="$PROJECT_DIR$/.idea/modules/system.main.iml" />
     </modules>
   </component>
 </project>
