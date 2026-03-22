@@ -8,6 +8,7 @@ import com.example.system.rest.dto.user.UserWriteDto;
 import com.example.system.rest.validation.OnUpdate;
 import com.example.system.service.user.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,17 +27,17 @@ public class UserController {
     private final UserService userService;
     private final UserMapper userMapper;
 
-//    @PostMapping
-//    public ResponseEntity<UserReadResponseDto> register(@Validated(OnCreate.class) @RequestBody UserWriteDto userWriteDto){
-//        User user = userMapper.toEntity(userWriteDto);
-//        UserReadResponseDto dto = userMapper.toDto(userService.register(user));
-//        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
-//    }
 
     @GetMapping("/{id}")
     public ResponseEntity<UserReadResponseDto> getById(@PathVariable("id") final String userId) {
         UserReadResponseDto dto = userMapper.toDto(userService.findUserById(userId));
         return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping("/count")
+    public ResponseEntity<Long> countUsers() {
+        Long usersCount = userService.getUsersCount();
+        return ResponseEntity.ok(usersCount);
     }
 
     @GetMapping

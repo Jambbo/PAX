@@ -5,6 +5,18 @@ const REALM = "pax";
 const CLIENT_ID = "pax-frontend";
 const REDIRECT_URI = "http://localhost:3000/auth/callback";
 
+const getInfoFromToken = () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return null;
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(window.atob(base64));
+    } catch (e) {
+        return null;
+    }
+};
+
 export async function login() {
 
     const { codeVerifier, codeChallenge } = await generatePKCE();

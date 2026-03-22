@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.Customizer; // ДОДАНО
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -18,6 +19,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration; // ДОДАНО
+import org.springframework.web.cors.CorsConfigurationSource; // ДОДАНО
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource; // ДОДАНО
+
+import java.util.Arrays; // ДОДАНО
+import java.util.List; // ДОДАНО
 
 @Configuration
 @EnableWebSecurity
@@ -27,32 +34,38 @@ public class SecurityConfig {
 
     private final UserProvisioningFilter userProvisioningFilter;
 
-
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+
+    // НОВИЙ БІН ДЛЯ НАЛАШТУВАННЯ CORS
     @Bean
-    @SneakyThrows
-    public AuthenticationManager authenticationManager(
-            final AuthenticationConfiguration configuration
-    ) {
-        return configuration.getAuthenticationManager();
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        // Дозволяємо твій фронтенд
+        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        // Дозволяємо всі потрібні методи, включаючи OPTIONS для preflight
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        // Дозволяємо всі заголовки (включаючи Authorization з токеном)
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
     @Bean
     @SneakyThrows
     public SecurityFilterChain filterChain(final HttpSecurity httpSecurity) {
-        httpSecurity.
-                csrf(AbstractHttpConfigurer::disable)
-                .cors(AbstractHttpConfigurer::disable)
+        httpSecurity
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(Customizer.withDefaults())
                 .httpBasic(AbstractHttpConfigurer::disable)
-                .sessionManagement(sessionManagement ->
-                        sessionManagement
-                                //on each request we verify token, thus we don't need a session
-                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS
-                                )
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .exceptionHandling(configurer ->
                         configurer.authenticationEntryPoint(
@@ -73,23 +86,25 @@ public class SecurityConfig {
                                             response.getWriter()
                                                     .write("Forbidden.");
                                         }))
-                .authorizeHttpRequests(configurer ->
-                        configurer.requestMatchers(
-                                        "/public/**",
-                                        "/actuator/**",
-                                        "/api/v1/groups/all",
-                                        "/api/v1/posts/all"
-                                )
-                                .permitAll()
-                                .anyRequest()
-                                .authenticated())
-                .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt)
-                .anonymous(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/public/**",
+                                "/actuator/**",
+                                "/api/v1/groups/all",
+                                "/api/v1/posts/all",
+                                "/api/v1/users/count",
+                                "/error"
+                        ).permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .anonymous(Customizer.withDefaults())
+                .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()))
                 .addFilterAfter(
                         userProvisioningFilter,
                         BearerTokenAuthenticationFilter.class
                 );
+
         return httpSecurity.build();
     }
-
 }

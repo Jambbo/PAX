@@ -44,10 +44,40 @@ public class GroupController {
         return ResponseEntity.ok(groupMapper.toDto(group));
     }
 
+    @PostMapping("/{groupId}/join")
+    public ResponseEntity<Void> join(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        groupService.joinUser(groupId, jwt.getSubject());
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/all")
-    public ResponseEntity<List<GroupReadResponseDto>> getAll() {
-        List<Group> groups = groupService.getAll();
+    public ResponseEntity<List<GroupReadResponseDto>> getAll(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        List<Group> groups = groupService.getAll(jwt);
+        List<GroupReadResponseDto> groupsDto = groupMapper.toDto(groups);
+        return ResponseEntity.ok(groupsDto);
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<List<GroupReadResponseDto>> getMyGroups(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        String userId = jwt.getSubject();
+        List<Group> groups = groupService.getUserGroups(userId);
         return ResponseEntity.ok(groupMapper.toDto(groups));
+    }
+
+    @PostMapping("/{groupId}/leave")
+    public ResponseEntity<Void> leave(
+            @PathVariable Long groupId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        groupService.leaveUser(groupId, jwt.getSubject());
+        return ResponseEntity.ok().build();
     }
 
     @PreAuthorize("@ownership.isGroupOwner(#groupId)")

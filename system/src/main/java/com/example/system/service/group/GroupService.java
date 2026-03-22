@@ -1,6 +1,7 @@
 package com.example.system.service.group;
 
 import com.example.system.domain.model.Group;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 import java.util.List;
 
@@ -10,7 +11,8 @@ public interface GroupService {
 
     Group getById(Long id);
 
-    List<Group> getAll();
+    List<Group> getAll(Jwt jwt);
+    List<Group> getUserGroups(String userId);
 
     Group update(Long id, Group group);
 
@@ -18,4 +20,7 @@ public interface GroupService {
 
     List<Group> getByOwner(String ownerId);
 
+    void joinUser(Long groupId, String userId);
+
+    void leaveUser(Long groupId, String userId);
 }
