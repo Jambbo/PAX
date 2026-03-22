@@ -22,7 +22,9 @@ public abstract class PostMapper {
     public abstract List<Post> toEntity(List<PostWriteDto> dtos);
 
     @Mapping(target = "authorId", source = "author.id")
+    @Mapping(target = "authorUsername", source = "author.username")
     @Mapping(target = "groupId", source = "group.id")
+    @Mapping(target = "groupName", source = "group.name")
     public abstract PostReadResponseDto toDto(Post post);
 
     public abstract List<PostReadResponseDto> toDto(List<Post> posts);

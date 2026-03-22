@@ -12,11 +12,10 @@ public record PostReadResponseDto(
         Long views,
         Long likes,
         String authorId,
+        String authorUsername,
         Long groupId,
+        String groupName,
         List<String> images,
         String createdAt,
         String updatedAt
-) {
-
-
-}
+) {}
