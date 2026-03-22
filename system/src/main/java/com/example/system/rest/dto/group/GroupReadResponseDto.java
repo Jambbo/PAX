@@ -10,10 +10,10 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.Set;
 
-@Data // Створює геттери, сеттери, toString, equals, hashCode
+@Data
 @Builder
-@AllArgsConstructor // Створює конструктор з усіма полями
-@NoArgsConstructor // Потрібен для Jackson
+@AllArgsConstructor
+@NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class GroupReadResponseDto {
 
@@ -27,7 +27,7 @@ public class GroupReadResponseDto {
     private Set<String> adminIds;
     private int memberCount;
     private int postCount;
-    private boolean isJoined; // тепер ми зможемо робити setJoined()
+    private boolean isJoined;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

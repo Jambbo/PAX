@@ -23,4 +23,6 @@ public interface UserService {
 
     User toggleProfilePrivacy(String userId);
 
+    Long getUsersCount();
+
 }

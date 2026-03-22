@@ -5,6 +5,7 @@ import com.example.system.domain.model.User;
 import com.example.system.repository.GroupRepository;
 import com.example.system.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,8 +42,18 @@ public class GroupServiceImpl implements GroupService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Group> getAll() {
-        return groupRepository.findAll();
+    public List<Group> getAll(Jwt jwt) {
+        if(jwt==null){
+            return groupRepository.findAll();
+        }else{
+            return groupRepository.findGroupsUserNotMemberOf(jwt.getSubject());
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Group> getUserGroups(String userId) {
+        return groupRepository.findByMembers_Id(userId);
     }
 
     @Override

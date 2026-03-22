@@ -25,15 +25,66 @@ export interface CreateGroupDto {
     location?: string;
 }
 
-// 1. Отримати всі групи
+
 export async function fetchAllGroups(): Promise<Group[]> {
     const token = localStorage.getItem("access_token");
-    const headers: HeadersInit = token ? { "Authorization": `Bearer ${token}` } : {};
+
+    const headers: HeadersInit = {
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        "Content-Type": "application/json"
+    };
 
     const response = await fetch("http://localhost:8081/api/v1/groups/all", {
-        headers: headers
+        method: "GET",
+        headers,
+        mode: "cors"
     });
-    if (!response.ok) throw new Error("Failed to load groups");
+
+    if (!response.ok) {
+        throw new Error(`Failed to load groups: ${response.status}`);
+    }
+
+    return response.json();
+}
+
+export async function fetchMyGroups(): Promise<Group[]> {
+    const token = localStorage.getItem("access_token");
+
+    const headers: HeadersInit = {
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        "Content-Type": "application/json"
+    };
+
+    const response = await fetch("http://localhost:8081/api/v1/groups/me", {
+        method: "GET",
+        headers,
+        mode: "cors"
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to load groups: ${response.status}`);
+    }
+
+    return response.json();
+}
+export async function fetchUsersCount(): Promise<Number> {
+    const token = localStorage.getItem("access_token");
+
+    const headers: HeadersInit = {
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        "Content-Type": "application/json"
+    };
+
+    const response = await fetch("http://localhost:8081/api/v1/users/count", {
+        method: "GET",
+        headers,
+        mode: "cors"
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to load users count: ${response.status}`);
+    }
+
     return response.json();
 }
 

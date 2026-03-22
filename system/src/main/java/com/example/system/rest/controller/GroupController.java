@@ -54,20 +54,21 @@ public class GroupController {
     }
 
     @GetMapping("/all")
-    public ResponseEntity<List<GroupReadResponseDto>> getAll(@AuthenticationPrincipal Jwt jwt) {
-        List<Group> groups = groupService.getAll();
-        List<GroupReadResponseDto> dtos = groupMapper.toDto(groups);
+    public ResponseEntity<List<GroupReadResponseDto>> getAll(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        List<Group> groups = groupService.getAll(jwt);
+        List<GroupReadResponseDto> groupsDto = groupMapper.toDto(groups);
+        return ResponseEntity.ok(groupsDto);
+    }
 
-        if (jwt != null) {
-            String currentUserId = jwt.getSubject();
-            // Проходимо по кожній групі і перевіряємо, чи є там наш ID
-            for (int i = 0; i < groups.size(); i++) {
-                boolean isMember = groups.get(i).getMembers().stream()
-                        .anyMatch(u -> u.getId().equals(currentUserId));
-                dtos.get(i).setJoined(isMember);
-            }
-        }
-        return ResponseEntity.ok(dtos);
+    @GetMapping("/me")
+    public ResponseEntity<List<GroupReadResponseDto>> getMyGroups(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        String userId = jwt.getSubject();
+        List<Group> groups = groupService.getUserGroups(userId);
+        return ResponseEntity.ok(groupMapper.toDto(groups));
     }
 
     @PostMapping("/{groupId}/leave")

@@ -67,19 +67,39 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+                .exceptionHandling(configurer ->
+                        configurer.authenticationEntryPoint(
+                                        (request, response, exception) -> {
+                                            response.setStatus(
+                                                    HttpStatus.UNAUTHORIZED
+                                                            .value()
+                                            );
+                                            response.getWriter()
+                                                    .write("Unauthorized.");
+                                        })
+                                .accessDeniedHandler(
+                                        (request, response, exception) -> {
+                                            response.setStatus(
+                                                    HttpStatus.FORBIDDEN
+                                                            .value()
+                                            );
+                                            response.getWriter()
+                                                    .write("Forbidden.");
+                                        }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/public/**",
                                 "/actuator/**",
                                 "/api/v1/groups/all",
                                 "/api/v1/posts/all",
+                                "/api/v1/users/count",
                                 "/error"
                         ).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated()
                 )
+                .anonymous(Customizer.withDefaults())
                 .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()))
-                // ПОВЕРТАЄМО ФІЛЬТР ТУТ:
                 .addFilterAfter(
                         userProvisioningFilter,
                         BearerTokenAuthenticationFilter.class

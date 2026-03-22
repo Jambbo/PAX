@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { fetchAllGroups, createGroup, joinGroup, leaveGroup } from '../groupsService';
+import React, {useState, useEffect} from 'react';
+import {fetchAllGroups, fetchMyGroups, createGroup, joinGroup, leaveGroup, fetchUsersCount} from '../groupsService';
 import {
     Users,
     Search,
@@ -15,7 +15,7 @@ import {
     Crown,
     Shield
 } from 'lucide-react';
-import { categories, Community } from "../index";
+import {categories, Community} from "../index";
 import {
     CreateCommunityModal,
     CreateCommunityFormData
@@ -47,32 +47,83 @@ export const GroupsPage: React.FC = () => {
     const [communities, setCommunities] = useState<Community[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Завантаження груп при старті сторінки
+    // GLOBAL STATS
+    const [allGroupsCount, setAllGroupsCount] = useState(0);
+    const [joinedGroupsCount, setJoinedGroupsCount] = useState(0);
+    const [totalMembersCount, setTotalMembersCount] = useState<Number>(0);
+    const [totalPostsCount, setTotalPostsCount] = useState(0);
+
+    // LOAD STATS ONCE
+    useEffect(() => {
+        const loadStats = async () => {
+            try {
+                const token = localStorage.getItem("access_token");
+
+                // Always load all groups
+                const all = await fetchAllGroups();
+
+                setAllGroupsCount(all.length);
+
+                // Only load joined groups if user logged in
+                if (token) {
+                    const joined = await fetchMyGroups();
+                    setJoinedGroupsCount(joined.length);
+                    setAllGroupsCount(all.length+joined.length);
+                } else {
+                    setJoinedGroupsCount(0);
+                }
+                
+                const membersCount = await fetchUsersCount();
+                setTotalMembersCount(
+                    membersCount
+                );
+
+                setTotalPostsCount(
+                    all.reduce((acc, g) => acc + (g.postCount || 0), 0)
+                );
+
+            } catch (e) {
+                console.error("Stats load failed", e);
+            }
+        };
+
+        loadStats();
+    }, []);
+
     useEffect(() => {
         const loadGroups = async () => {
             setIsLoading(true);
             try {
-                // Отримуємо групи з нашого бекенду
-                const backendGroups = await fetchAllGroups();
+                const token = localStorage.getItem("access_token");
+                let backendGroups;
 
-                // Оскільки твій UI очікує поля типу avatar, banner, members (яких поки немає на бекенді),
-                // ми можемо додати їм дефолтні значення, щоб не ламався твій красивий дизайн
+                if (activeTab === 'joined') {
+                    if (!token) {
+                        setCommunities([]);
+                        setIsLoading(false);
+                        return;
+                    }
+                    backendGroups = await fetchMyGroups();
+                } else {
+                    backendGroups = await fetchAllGroups();
+                }
+
                 const formattedGroups = backendGroups.map(bg => ({
                     id: bg.id,
                     name: bg.name,
                     description: bg.description,
                     avatar: bg.name.substring(0, 2).toUpperCase(),
                     banner: "from-purple-500 to-pink-600",
-                    members: bg.memberCount || 0, // Використовуй реальне число з бази
+                    members: bg.memberCount || 0,
                     posts: bg.postCount || 0,
                     category: "General",
-                    // ОСЬ ТУТ ЗАМІСТЬ false СТАВИМО ДАНІ З БЕКЕНДУ
-                    isJoined: bg.joined || bg.isJoined || false,
+                    isJoined: activeTab === 'joined',
                     isVerified: false,
                     onlineMembers: 1
                 }));
 
                 setCommunities(formattedGroups);
+
             } catch (error) {
                 console.error("Помилка завантаження груп:", error);
             } finally {
@@ -81,7 +132,7 @@ export const GroupsPage: React.FC = () => {
         };
 
         loadGroups();
-    }, []);
+    }, [activeTab]);
 
     const [selectedCategory, setSelectedCategory] = useState("All Categories");
 
@@ -146,34 +197,34 @@ export const GroupsPage: React.FC = () => {
             setIsSubmitting(false);
         }
     };
-
     const toggleJoin = async (communityId: number) => {
         const token = localStorage.getItem("access_token");
         if (!token) return;
 
-        // Знаходимо поточний стан групи
         const community = communities.find(c => c.id === communityId);
         if (!community) return;
 
         try {
             if (community.isJoined) {
-                // Якщо вже там — виходимо
                 await leaveGroup(communityId);
+                setJoinedGroupsCount(prev => Math.max(0, prev - 1));
             } else {
-                // Якщо ще ні — заходимо
                 await joinGroup(communityId);
+                setJoinedGroupsCount(prev => prev + 1);
             }
 
-            // Оновлюємо UI (перемикаємо стан локально)
-            setCommunities(communities.map(c =>
-                c.id === communityId
-                    ? {
-                        ...c,
-                        isJoined: !c.isJoined,
-                        members: c.isJoined ? c.members - 1 : c.members + 1
-                    }
-                    : c
-            ));
+            setCommunities(prev =>
+                prev.map(c =>
+                    c.id === communityId
+                        ? {
+                            ...c,
+                            isJoined: !c.isJoined,
+                            members: c.isJoined ? c.members - 1 : c.members + 1
+                        }
+                        : c
+                )
+            );
+
         } catch (err) {
             console.error("Помилка:", err);
         }
@@ -183,15 +234,12 @@ export const GroupsPage: React.FC = () => {
         const matchesSearch =
             community.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             community.description.toLowerCase().includes(searchQuery.toLowerCase());
+
         const matchesCategory =
-            selectedCategory === "All Categories" || community.category === selectedCategory;
-        const matchesTab =
-            activeTab === 'discover'
-                ? !community.isJoined
-                : activeTab === 'joined'
-                    ? community.isJoined
-                    : true;
-        return matchesSearch && matchesCategory && matchesTab;
+            selectedCategory === "All Categories" ||
+            community.category === selectedCategory;
+
+        return matchesSearch && matchesCategory;
     });
 
     return (
@@ -199,7 +247,7 @@ export const GroupsPage: React.FC = () => {
             {/* Header */}
             <div className="mb-8">
                 <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-3 transition-colors">
-                    <Users className={`text-${accentColor}-500`} size={40} />
+                    <Users className={`text-${accentColor}-500`} size={40}/>
                     Communities
                 </h1>
                 <p className="text-gray-500 dark:text-gray-400 text-lg transition-colors">
@@ -209,50 +257,58 @@ export const GroupsPage: React.FC = () => {
 
             {/* Stats Bar */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div className={`bg-${accentColor}-50 dark:bg-${accentColor}-900/10 border border-${accentColor}-200 dark:border-${accentColor}-500/20 rounded-xl p-4 transition-colors`}>
+                <div
+                    className={`bg-${accentColor}-50 dark:bg-${accentColor}-900/10 border border-${accentColor}-200 dark:border-${accentColor}-500/20 rounded-xl p-4 transition-colors`}>
                     <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 bg-${accentColor}-600 rounded-lg flex items-center justify-center shadow-md shadow-${accentColor}-500/20`}>
-                            <Users size={20} className="text-white" />
+                        <div
+                            className={`w-10 h-10 bg-${accentColor}-600 rounded-lg flex items-center justify-center shadow-md shadow-${accentColor}-500/20`}>
+                            <Users size={20} className="text-white"/>
                         </div>
                         <div>
                             <p className="text-gray-600 dark:text-gray-400 text-xs font-medium">Total Communities</p>
-                            <p className="text-gray-900 dark:text-white text-xl font-bold">{communities.length}</p>
+                            <p className="text-gray-900 dark:text-white text-xl font-bold">{allGroupsCount}</p>
                         </div>
                     </div>
                 </div>
-                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-4 transition-colors">
+                <div
+                    className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-4 transition-colors">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-md shadow-blue-500/20">
-                            <Check size={20} className="text-white" />
+                        <div
+                            className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center shadow-md shadow-blue-500/20">
+                            <Check size={20} className="text-white"/>
                         </div>
                         <div>
                             <p className="text-gray-600 dark:text-gray-400 text-xs font-medium">Joined</p>
-                            <p className="text-gray-900 dark:text-white text-xl font-bold">{communities.filter(c => c.isJoined).length}</p>
+                            <p className="text-gray-900 dark:text-white text-xl font-bold">{joinedGroupsCount}</p>
                         </div>
                     </div>
                 </div>
-                <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-500/20 rounded-xl p-4 transition-colors">
+                <div
+                    className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-500/20 rounded-xl p-4 transition-colors">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center shadow-md shadow-green-500/20">
-                            <TrendingUp size={20} className="text-white" />
+                        <div
+                            className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center shadow-md shadow-green-500/20">
+                            <TrendingUp size={20} className="text-white"/>
                         </div>
                         <div>
                             <p className="text-gray-600 dark:text-gray-400 text-xs font-medium">Total Members</p>
                             <p className="text-gray-900 dark:text-white text-xl font-bold">
-                                {(communities.reduce((acc, c) => acc + c.members, 0) / 1000).toFixed(1)}k
+                                {totalMembersCount}
                             </p>
                         </div>
                     </div>
                 </div>
-                <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-500/20 rounded-xl p-4 transition-colors">
+                <div
+                    className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-500/20 rounded-xl p-4 transition-colors">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center shadow-md shadow-orange-500/20">
-                            <MessageSquare size={20} className="text-white" />
+                        <div
+                            className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center shadow-md shadow-orange-500/20">
+                            <MessageSquare size={20} className="text-white"/>
                         </div>
                         <div>
                             <p className="text-gray-600 dark:text-gray-400 text-xs font-medium">Total Posts</p>
                             <p className="text-gray-900 dark:text-white text-xl font-bold">
-                                {(communities.reduce((acc, c) => acc + c.posts, 0) / 1000).toFixed(1)}k
+                                {totalPostsCount}
                             </p>
                         </div>
                     </div>
@@ -260,14 +316,15 @@ export const GroupsPage: React.FC = () => {
             </div>
 
             {/* Filters and Search */}
-            <div className="bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-xl p-4 mb-6 shadow-sm transition-colors">
+            <div
+                className="bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-xl p-4 mb-6 shadow-sm transition-colors">
                 <div className="flex flex-col lg:flex-row gap-4">
                     {/* Tabs */}
                     <div className="flex gap-2">
                         {[
-                            { id: 'discover', label: 'Discover' },
-                            { id: 'joined', label: 'My Communities' },
-                            { id: 'popular', label: 'Popular' }
+                            {id: 'discover', label: 'Discover'},
+                            {id: 'joined', label: 'My Communities'},
+                            {id: 'popular', label: 'Popular'}
                         ].map((tab) => (
                             <button
                                 key={tab.id}
@@ -285,7 +342,7 @@ export const GroupsPage: React.FC = () => {
 
                     {/* Search */}
                     <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18}/>
                         <input
                             type="text"
                             placeholder="Search communities..."
@@ -300,13 +357,14 @@ export const GroupsPage: React.FC = () => {
                         onClick={openCreateModal}
                         className={`px-4 py-2 bg-${accentColor}-600 hover:bg-${accentColor}-700 text-white rounded-lg transition-all shadow-lg shadow-${accentColor}-500/20 font-medium flex items-center gap-2 whitespace-nowrap`}
                     >
-                        <Plus size={18} />
+                        <Plus size={18}/>
                         Create Community
                     </button>
                 </div>
 
                 {/* Category Pills */}
-                <div className="flex gap-2 mt-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
+                <div
+                    className="flex gap-2 mt-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
                     {categories.map((category) => (
                         <button
                             key={category}
@@ -334,13 +392,15 @@ export const GroupsPage: React.FC = () => {
                         <div className={`h-24 bg-gradient-to-r ${community.banner} relative`}>
                             <div className="absolute top-3 right-3 flex gap-2">
                                 {community.isVerified && (
-                                    <div className="bg-white/20 backdrop-blur-sm rounded-full p-1.5" title="Verified Community">
-                                        <Shield size={14} className="text-white" />
+                                    <div className="bg-white/20 backdrop-blur-sm rounded-full p-1.5"
+                                         title="Verified Community">
+                                        <Shield size={14} className="text-white"/>
                                     </div>
                                 )}
                                 {community.isPrivate && (
-                                    <div className="bg-white/20 backdrop-blur-sm rounded-full p-1.5" title="Private Community">
-                                        <Lock size={14} className="text-white" />
+                                    <div className="bg-white/20 backdrop-blur-sm rounded-full p-1.5"
+                                         title="Private Community">
+                                        <Lock size={14} className="text-white"/>
                                     </div>
                                 )}
                             </div>
@@ -365,12 +425,12 @@ export const GroupsPage: React.FC = () => {
                                 >
                                     {community.isJoined ? (
                                         <>
-                                            <Check size={16} />
+                                            <Check size={16}/>
                                             Joined
                                         </>
                                     ) : (
                                         <>
-                                            <UserPlus size={16} />
+                                            <UserPlus size={16}/>
                                             Join
                                         </>
                                     )}
@@ -381,7 +441,7 @@ export const GroupsPage: React.FC = () => {
                             <h3 className="text-gray-900 dark:text-white font-bold text-lg mb-1 flex items-center gap-2 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
                                 {community.name}
                                 {community.isVerified && (
-                                    <Star size={16} className="text-yellow-500 fill-yellow-500" />
+                                    <Star size={16} className="text-yellow-500 fill-yellow-500"/>
                                 )}
                             </h3>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
@@ -392,23 +452,24 @@ export const GroupsPage: React.FC = () => {
                             <div className="flex items-center justify-between text-sm">
                                 <div className="flex items-center gap-4 text-gray-500 dark:text-gray-400">
                                     <div className="flex items-center gap-1" title="Members">
-                                        <Users size={14} />
+                                        <Users size={14}/>
                                         <span>{(community.members / 1000).toFixed(1)}k</span>
                                     </div>
                                     <div className="flex items-center gap-1" title="Posts">
-                                        <MessageSquare size={14} />
+                                        <MessageSquare size={14}/>
                                         <span>{(community.posts / 1000).toFixed(1)}k</span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-1 text-green-500">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"/>
                                     <span className="text-xs font-medium">{community.onlineMembers} online</span>
                                 </div>
                             </div>
 
                             {/* Category Tag */}
                             <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/50">
-                                <span className={`inline-block px-3 py-1 bg-${accentColor}-50 dark:bg-${accentColor}-900/20 text-${accentColor}-700 dark:text-${accentColor}-300 rounded-full text-xs font-medium transition-colors`}>
+                                <span
+                                    className={`inline-block px-3 py-1 bg-${accentColor}-50 dark:bg-${accentColor}-900/20 text-${accentColor}-700 dark:text-${accentColor}-300 rounded-full text-xs font-medium transition-colors`}>
                                     {community.category}
                                 </span>
                             </div>
@@ -419,8 +480,9 @@ export const GroupsPage: React.FC = () => {
 
             {/* Empty State */}
             {filteredCommunities.length === 0 && (
-                <div className="bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-xl p-12 text-center shadow-sm">
-                    <Users size={48} className="text-gray-400 mx-auto mb-4" />
+                <div
+                    className="bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-xl p-12 text-center shadow-sm">
+                    <Users size={48} className="text-gray-400 mx-auto mb-4"/>
                     <h3 className="text-gray-900 dark:text-white font-bold text-xl mb-2">No communities found</h3>
                     <p className="text-gray-500 dark:text-gray-400 mb-6">Try adjusting your search or filters</p>
                     <button
