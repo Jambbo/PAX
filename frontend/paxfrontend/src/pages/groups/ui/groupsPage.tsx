@@ -191,7 +191,7 @@ export const GroupsPage: React.FC = () => {
             setCommunities(prev => [newCommunity, ...prev]);
 
         } catch (err: any) {
-            setServerError("Не вдалося створити спільноту. Перевірте формат даних або сервер.");
+            setServerError("Не вдалося створити спільноту. Перевірте формат даних або сервер.", err);
             console.error("Помилка при створенні:", err);
         } finally {
             setIsSubmitting(false);
