@@ -1,354 +1,202 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Send, MoreVertical, Phone, Video, Paperclip, Smile, Image as ImageIcon, Check, CheckCheck, Plus } from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import { Client } from "@stomp/stompjs";
+import { Send } from "lucide-react";
 
-interface Message {
-    id: number;
-    sender: string;
-    content: string;
-    time: string;
-    isSent: boolean;
-    isRead: boolean;
+interface User {
+    id: string;
+    username: string;
 }
 
-interface Conversation {
-    id: number;
-    name: string;
-    avatar: string;
-    lastMessage: string;
-    time: string;
-    unread: number;
-    online: boolean;
+interface ChatMessage {
+    id?: string;
+    conversationId: string;
+    senderId: string;
+    content: string;
+    createdAt?: string;
 }
 
 export const MessagesPage: React.FC = () => {
-    // --- ЛОГІКА КОЛЬОРІВ ---
-    const [accentColor, setAccentColor] = useState(() => {
-        return localStorage.getItem('site_accent_color') || 'purple';
+    
+const [users, setUsers] = useState<User[]>([]);
+const [selectedUser, setSelectedUser] = useState<User | null>(null);
+const [messages, setMessages] = useState<ChatMessage[]>([]);
+const [input, setInput] = useState("");
+const [client, setClient] = useState<Client | null>(null);
+const [currentUserId, setCurrentUserId] = useState<string>("");
+
+// userId -> conversationId
+const [conversationMap, setConversationMap] =
+    useState<Record<string, string>>({});
+
+const getUserIdFromToken = () => {
+    const token = localStorage.getItem("access_token")!;
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.sub;
+};
+
+// websocket connect
+useEffect(() => {
+
+    const token = localStorage.getItem("access_token")!;
+    const userId = getUserIdFromToken();
+    setCurrentUserId(userId);
+
+    const stompClient = new Client({
+        brokerURL: "ws://localhost:8081/ws",
+        connectHeaders: {
+            Authorization: `Bearer ${token}`
+        },
+        reconnectDelay: 5000
     });
 
-    useEffect(() => {
-        const handleStorageChange = () => {
-            setAccentColor(localStorage.getItem('site_accent_color') || 'purple');
-        };
+    stompClient.onConnect = () => {
+        stompClient.subscribe("/user/queue/messages", (msg) => {
+            const body: ChatMessage = JSON.parse(msg.body);
 
-        window.addEventListener('storage', handleStorageChange);
-        window.addEventListener('accent-color-change', handleStorageChange);
+            setMessages(prev => {
+                const exists = prev.find(m => m.id === body.id);
+                if (exists) return prev;
+                return [...prev, body];
+            });
 
-        return () => {
-            window.removeEventListener('storage', handleStorageChange);
-            window.removeEventListener('accent-color-change', handleStorageChange);
-        };
-    }, []);
-    // -----------------------
+            // detect other participant
+            const otherUserId =
+                body.senderId === userId
+                    ? getRecipientFromConversation(body, userId)
+                    : body.senderId;
 
-    const [selectedChat, setSelectedChat] = useState(1);
-    const [messageInput, setMessageInput] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
-
-    const conversations: Conversation[] = [
-        {
-            id: 1,
-            name: 'Sarah Johnson',
-            avatar: 'SJ',
-            lastMessage: 'Hey! Did you see the new announcement?',
-            time: '2m ago',
-            unread: 2,
-            online: true
-        },
-        {
-            id: 2,
-            name: 'Mike Rodriguez',
-            avatar: 'MR',
-            lastMessage: 'Thanks for your help earlier!',
-            time: '1h ago',
-            unread: 0,
-            online: true
-        },
-        {
-            id: 3,
-            name: 'Emily Chen',
-            avatar: 'EC',
-            lastMessage: 'See you at the meetup tomorrow?',
-            time: '3h ago',
-            unread: 1,
-            online: false
-        },
-        {
-            id: 4,
-            name: 'Alex Turner',
-            avatar: 'AT',
-            lastMessage: 'That\'s a great idea! Let\'s do it.',
-            time: '5h ago',
-            unread: 0,
-            online: false
-        },
-        {
-            id: 5,
-            name: 'Community Group',
-            avatar: 'CG',
-            lastMessage: 'John: Welcome everyone to the group!',
-            time: '1d ago',
-            unread: 5,
-            online: true
-        },
-        {
-            id: 6,
-            name: 'David Kim',
-            avatar: 'DK',
-            lastMessage: 'Perfect! I\'ll send you the details.',
-            time: '2d ago',
-            unread: 0,
-            online: false
-        }
-    ];
-
-    const messages: Message[] = [
-        {
-            id: 1,
-            sender: 'Sarah Johnson',
-            content: 'Hey there! How are you doing?',
-            time: '10:30 AM',
-            isSent: false,
-            isRead: true
-        },
-        {
-            id: 2,
-            sender: 'You',
-            content: 'Hi Sarah! I\'m doing great, thanks for asking!',
-            time: '10:32 AM',
-            isSent: true,
-            isRead: true
-        },
-        {
-            id: 3,
-            sender: 'Sarah Johnson',
-            content: 'Did you see the new announcement about the upcoming event?',
-            time: '10:33 AM',
-            isSent: false,
-            isRead: true
-        },
-        {
-            id: 4,
-            sender: 'You',
-            content: 'Not yet! What\'s it about?',
-            time: '10:35 AM',
-            isSent: true,
-            isRead: true
-        },
-        {
-            id: 5,
-            sender: 'Sarah Johnson',
-            content: 'They\'re organizing a community meetup next weekend. It sounds really exciting!',
-            time: '10:36 AM',
-            isSent: false,
-            isRead: true
-        },
-        {
-            id: 6,
-            sender: 'Sarah Johnson',
-            content: 'You should definitely come! It would be great to meet in person.',
-            time: '10:36 AM',
-            isSent: false,
-            isRead: true
-        },
-        {
-            id: 7,
-            sender: 'You',
-            content: 'That sounds amazing! I\'ll definitely check it out. Thanks for letting me know!',
-            time: '10:38 AM',
-            isSent: true,
-            isRead: false
-        }
-    ];
-
-    const handleSendMessage = () => {
-        if (messageInput.trim()) {
-            console.log('Sending:', messageInput);
-            setMessageInput('');
-        }
+            if (otherUserId) {
+                setConversationMap(prev => ({
+                    ...prev,
+                    [otherUserId]: body.conversationId
+                }));
+            }
+        });
     };
 
-    const selectedConversation = conversations.find(c => c.id === selectedChat);
+    stompClient.activate();
+    setClient(stompClient);
 
-    return (
-        <div className="h-[calc(100vh-7rem)] flex gap-4 max-w-7xl mx-auto">
-            {/* Conversations List */}
-            <div className="w-80 bg-gray-800/30 border border-gray-700/50 rounded-xl flex flex-col overflow-hidden">
-                {/* Search Header */}
-                <div className="p-4 border-b border-gray-700/50">
-                    <div className="flex items-center gap-2">
-                        {/*Search*/}
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Search conversations..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-gray-900/50 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
-                            />
-                        </div>
-                        <div>
-                            <button className="h-10 w-10 flex items-center justify-center rounded-lg
-                      bg-purple-600 hover:bg-purple-500 transition-colors
-                      text-white text-xl font-semibold
-                      relative top-[-1px]">
-                                <Plus size={18} />
-                            </button>
-                        </div>
-                    </div>
+    return () => stompClient.deactivate();
+
+}, []);
+
+// helper to detect other user
+const getRecipientFromConversation = (
+    message: ChatMessage,
+    me: string
+) => {
+    const match = messages.find(
+        m =>
+            m.conversationId === message.conversationId &&
+            m.senderId !== me
+    );
+    return match?.senderId;
+};
+
+// load users
+useEffect(() => {
+    fetch("http://localhost:8081/api/v1/users/latest", {
+        headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`
+        }
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (Array.isArray(data)) setUsers(data);
+        });
+}, []);
+
+const sendMessage = () => {
+    if (!input.trim() || !selectedUser || !client) return;
+
+    client.publish({
+        destination: "/app/chat.send",
+        body: JSON.stringify({
+            recipientId: selectedUser.id,
+            content: input
+        })
+    });
+
+    setInput("");
+};
+
+const activeConversationId =
+    selectedUser ? conversationMap[selectedUser.id] : null;
+
+const filteredMessages = messages.filter(
+    m => m.conversationId === activeConversationId
+);
+
+return (
+    <div className="h-[calc(100vh-7rem)] flex max-w-6xl mx-auto border rounded-xl overflow-hidden">
+
+        {/* USERS */}
+        <div className="w-72 border-r bg-gray-900 text-white">
+            <div className="p-4 font-semibold">Users</div>
+
+            {users.map(user => (
+                <div
+                    key={user.id}
+                    onClick={() => setSelectedUser(user)}
+                    className={`p-4 cursor-pointer hover:bg-gray-800 ${
+        selectedUser?.id === user.id ? "bg-gray-800" : ""
+    }`}
+                >
+                    {user.username}
                 </div>
+            ))}
+        </div>
 
+        {/* CHAT */}
+        <div className="flex-1 flex flex-col bg-gray-800 text-white">
 
-                {/* Conversations */}
-                <div className="flex-1 overflow-y-auto">
-                    {conversations.map((conv) => (
-                        <button
-                            key={conv.id}
-                            onClick={() => setSelectedChat(conv.id)}
-                            className={`w-full flex items-center gap-3 p-4 border-b border-gray-100 dark:border-gray-700/30 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors ${
-                                selectedChat === conv.id
-                                    ? `bg-${accentColor}-50 dark:bg-${accentColor}-900/10`
-                                    : ''
-                            }`}
-                        >
-                            <div className="relative flex-shrink-0">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${
-                                    conv.id === 5 ? 'bg-gradient-to-br from-green-500 to-emerald-600' :
-                                        conv.id % 3 === 0 ? 'bg-gradient-to-br from-blue-500 to-cyan-600' :
-                                            conv.id % 2 === 0 ? 'bg-gradient-to-br from-purple-500 to-pink-600' :
-                                                'bg-gradient-to-br from-orange-500 to-red-600'
-                                }`}>
-                                    {conv.avatar}
-                                </div>
-                                {conv.online && (
-                                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full" />
-                                )}
-                            </div>
-                            <div className="flex-1 min-w-0 text-left">
-                                <div className="flex items-center justify-between mb-1">
-                                    <h3 className={`font-semibold text-gray-900 dark:text-white truncate ${selectedChat === conv.id ? `text-${accentColor}-700 dark:text-${accentColor}-300` : ''}`}>
-                                        {conv.name}
-                                    </h3>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{conv.time}</span>
-                                </div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{conv.lastMessage}</p>
-                            </div>
-                            {conv.unread > 0 && (
-                                <div className={`flex-shrink-0 w-5 h-5 bg-${accentColor}-600 rounded-full flex items-center justify-center shadow-sm`}>
-                                    <span className="text-xs font-bold text-white">{conv.unread}</span>
-                                </div>
-                            )}
-                        </button>
-                    ))}
-                </div>
+            <div className="p-4 border-b">
+                {selectedUser ? selectedUser.username : "Select user"}
             </div>
 
-            {/* Chat Area */}
-            <div className="flex-1 bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-xl flex flex-col overflow-hidden transition-colors shadow-sm">
-                {/* Chat Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700/50">
-                    <div className="flex items-center gap-3">
-                        <div className="relative">
-                            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center font-bold text-white shadow-sm">
-                                {selectedConversation?.avatar}
-                            </div>
-                            {selectedConversation?.online && (
-                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full" />
-                            )}
-                        </div>
-                        <div>
-                            <h2 className="font-semibold text-gray-900 dark:text-white">{selectedConversation?.name}</h2>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {selectedConversation?.online ? 'Active now' : 'Offline'}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                            <Phone size={20} />
-                        </button>
-                        <button className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                            <Video size={20} />
-                        </button>
-                        <button className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                            <MoreVertical size={20} />
-                        </button>
-                    </div>
-                </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                {filteredMessages.map((msg, i) => {
 
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 dark:bg-transparent">
-                    {messages.map((message) => (
+                    const isMine = msg.senderId === currentUserId;
+
+                    return (
                         <div
-                            key={message.id}
-                            className={`flex ${message.isSent ? 'justify-end' : 'justify-start'}`}
+                            key={i}
+                            className={`flex ${isMine ? "justify-end" : "justify-start"}`}
                         >
-                            <div className={`max-w-md ${message.isSent ? 'order-2' : 'order-1'}`}>
-                                <div
-                                    className={`rounded-2xl px-4 py-3 shadow-sm ${
-                                        message.isSent
-                                            ? `bg-${accentColor}-600 text-white`
-                                            : 'bg-white dark:bg-gray-700/50 text-gray-900 dark:text-white border border-gray-200 dark:border-transparent'
-                                    }`}
-                                >
-                                    <p className="text-sm leading-relaxed">{message.content}</p>
-                                </div>
-                                <div className={`flex items-center gap-1 mt-1 px-2 ${
-                                    message.isSent ? 'justify-end' : 'justify-start'
-                                }`}>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400">{message.time}</span>
-                                    {message.isSent && (
-                                        message.isRead ? (
-                                            <CheckCheck size={14} className={`text-${accentColor}-600 dark:text-${accentColor}-400`} />
-                                        ) : (
-                                            <Check size={14} className="text-gray-400" />
-                                        )
-                                    )}
-                                </div>
+                            <div
+                                className={`px-4 py-2 rounded-lg max-w-xs ${
+        isMine ? "bg-purple-600" : "bg-gray-700"
+    }`}
+                            >
+                                {msg.content}
                             </div>
                         </div>
-                    ))}
-                </div>
+                    );
+                })}
+            </div>
 
-                {/* Input Area */}
-                <div className="p-4 border-t border-gray-200 dark:border-gray-700/50 bg-white dark:bg-gray-800/30">
-                    <div className="flex items-end gap-3">
-                        <div className="flex gap-2">
-                            <button className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                                <Paperclip size={20} />
-                            </button>
-                            <button className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                                <ImageIcon size={20} />
-                            </button>
-                        </div>
-                        <div className="flex-1 relative">
-                            <textarea
-                                value={messageInput}
-                                onChange={(e) => setMessageInput(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                        e.preventDefault();
-                                        handleSendMessage();
-                                    }
-                                }}
-                                placeholder="Type a message..."
-                                rows={1}
-                                className={`w-full bg-gray-50 dark:bg-gray-900/50 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-3 pr-12 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:border-${accentColor}-500 transition-colors resize-none`}
-                            />
-                            <button className="absolute right-3 bottom-3 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
-                                <Smile size={20} />
-                            </button>
-                        </div>
-                        <button
-                            onClick={handleSendMessage}
-                            className={`w-12 h-12 flex items-center justify-center bg-${accentColor}-600 hover:bg-${accentColor}-700 rounded-lg transition-all shadow-lg shadow-${accentColor}-500/20`}
-                        >
-                            <Send size={20} className="text-white" />
-                        </button>
-                    </div>
-                </div>
+            <div className="p-4 border-t flex gap-2">
+                <input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    className="flex-1 bg-gray-700 px-3 py-2 rounded"
+                    placeholder="Type message..."
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") sendMessage();
+                    }}
+                />
+
+                <button
+                    onClick={sendMessage}
+                    className="bg-purple-600 px-4 rounded flex items-center"
+                >
+                    <Send size={18}/>
+                </button>
             </div>
         </div>
-    );
+    </div>
+);
+
 };

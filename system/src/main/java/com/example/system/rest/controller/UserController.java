@@ -8,7 +8,6 @@ import com.example.system.rest.dto.user.UserWriteDto;
 import com.example.system.rest.validation.OnUpdate;
 import com.example.system.service.user.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -54,6 +53,7 @@ public class UserController {
         User updatedUser = userService.update(userId, userWriteDto);
         return ResponseEntity.ok(userMapper.toDto(updatedUser));
     }
+
     @PreAuthorize("@userAuth.isAdmin()")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable("id") final String userId) {
@@ -90,6 +90,19 @@ public class UserController {
     @PatchMapping("/me/profile-privacy")
     public User toggleMyPrivacy(@AuthenticationPrincipal Jwt jwt) {
         return userService.toggleProfilePrivacy(jwt.getSubject());
+    }
+
+    @GetMapping("/latest")
+    public ResponseEntity<List<UserReadResponseDto>> getLatestUsers(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "5") int limit
+    ) {
+        List<User> users = userService.findLatestUsers(limit)
+                .stream()
+                .filter(u -> !u.getId().equals(jwt.getSubject()))
+                .toList();
+
+        return ResponseEntity.ok(userMapper.toDto(users));
     }
 
 
