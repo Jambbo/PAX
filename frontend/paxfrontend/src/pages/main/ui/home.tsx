@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, MessageSquare, Users, Eye, Loader2, Heart, X, Image as ImageIcon, Send } from 'lucide-react';
 import { fetchAllPosts, createPost, Post } from '../postServise';
-import { fetchUsersCount } from '../../groups/groupsService';
+import {fetchUsersCount, Group} from '../../groups/groupsService';
 import { fetchMyGroups} from "../../groups/groupsService";
 
 // --- Компонент Модального вікна для перегляду фото (LightBox) ---
@@ -80,13 +80,11 @@ export const Home: React.FC = () => {
         loadMembers();
     }, []);
 
-    // --- ЛОГІКА ПОСТІВ ---
     const [posts, setPosts] = useState<Post[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-    // --- ЛОГІКА СТВОРЕННЯ ПОСТА ---
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [newPostText, setNewPostText] = useState("");
@@ -114,7 +112,7 @@ export const Home: React.FC = () => {
             setError(null);
             try {
                 const data = await fetchAllPosts();
-                setPosts(data.reverse()); // Новіші зверху
+                setPosts(data.reverse());
             } catch (err: any) {
                 console.error("Помилка завантаження постів:", err);
                 setError("Не вдалося завантажити останні обговорення.");

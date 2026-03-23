@@ -2,22 +2,20 @@ import { Outlet } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { Header } from "./widgets/header";
 import { Sidebar } from "./widgets/sidebar";
+import {useTokenRefresh} from "./features/Auth/useTokenRefresh";
 
 const App: React.FC = () => {
+    useTokenRefresh();
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-    // --- 1. ДОДАНО: Ініціалізація теми з основного коду ---
     useEffect(() => {
         const initTheme = () => {
-            // Зчитуємо тему (за замовчуванням Dark)
             const savedTheme = localStorage.getItem('site_theme') || 'Dark';
             const root = window.document.documentElement;
 
-            // Спочатку очищаємо клас
             root.classList.remove('dark');
 
-            // Застосовуємо логіку
             if (savedTheme === 'Dark') {
                 root.classList.add('dark');
             } else if (savedTheme === 'Auto') {
@@ -25,20 +23,28 @@ const App: React.FC = () => {
                     root.classList.add('dark');
                 }
             }
-            // Якщо Light, то клас dark не додаємо
         };
 
         initTheme();
     }, []);
-    // -----------------------------------------------------
 
     useEffect(() => {
-        const token = localStorage.getItem('token') || localStorage.getItem('access_token');
-        if (token) {
-            setIsAuthenticated(true);
-        } else {
-            setIsAuthenticated(false);
-        }
+
+        const handler = () => {
+            const token = localStorage.getItem("access_token");
+            setIsAuthenticated(Boolean(token));
+        };
+
+        handler();
+
+        window.addEventListener("auth-change", handler);
+        window.addEventListener("storage", handler);
+
+        return () => {
+            window.removeEventListener("auth-change", handler);
+            window.removeEventListener("storage", handler);
+        };
+
     }, []);
 
     const toggleSidebar = () => {
@@ -46,7 +52,6 @@ const App: React.FC = () => {
     };
 
     return (
-        // --- 2. ДОДАНО: Стилі обгортки з основного коду (адаптивність) ---
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white transition-colors duration-300">
 
             <Header isAuthenticated={isAuthenticated} />

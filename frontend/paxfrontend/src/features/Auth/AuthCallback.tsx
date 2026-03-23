@@ -42,6 +42,8 @@ export const AuthCallback = () => {
 
                 if (data.access_token) {
                     localStorage.setItem("access_token", data.access_token);
+                    localStorage.setItem("refresh_token", data.refresh_token);
+                    localStorage.setItem("expires_at", (Date.now() + data.expires_in * 1000).toString());
                     localStorage.removeItem("pkce_code_verifier");
 
 
