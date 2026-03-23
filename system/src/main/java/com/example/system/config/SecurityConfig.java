@@ -44,11 +44,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Дозволяємо твій фронтенд
         configuration.setAllowedOrigins(List.of("http://localhost:3000"));
-        // Дозволяємо всі потрібні методи, включаючи OPTIONS для preflight
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        // Дозволяємо всі заголовки (включаючи Authorization з токеном)
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
 
@@ -93,7 +90,8 @@ public class SecurityConfig {
                                 "/api/v1/groups/all",
                                 "/api/v1/posts/all",
                                 "/api/v1/users/count",
-                                "/error"
+                                "/error",
+                                "/ws/**"
                         ).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated()

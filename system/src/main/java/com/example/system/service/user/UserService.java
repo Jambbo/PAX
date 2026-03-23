@@ -25,4 +25,5 @@ public interface UserService {
 
     Long getUsersCount();
 
+    List<User> findLatestUsers(int limit);
 }

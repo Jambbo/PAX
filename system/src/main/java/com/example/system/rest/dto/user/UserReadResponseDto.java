@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record UserReadResponseDto(
-        Long id,
+        String id,
         String username,
         String email,
         String firstName,

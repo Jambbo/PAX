@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS users
 (
     id                  VARCHAR(36) PRIMARY KEY,
-    username            VARCHAR(50)  NOT NULL UNIQUE,
+    username            VARCHAR(50) NOT NULL UNIQUE,
     email               VARCHAR(255) UNIQUE,
     first_name          VARCHAR(100),
     last_name           VARCHAR(100),
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS posts_images
 --manytomany
 CREATE TABLE IF NOT EXISTS group_members
 (
-    group_id BIGINT NOT NULL,
+    group_id BIGINT      NOT NULL,
     user_id  VARCHAR(36) NOT NULL,
     PRIMARY KEY (group_id, user_id),
     CONSTRAINT fk_group_members_groups FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS group_members
 --manytomany
 CREATE TABLE IF NOT EXISTS group_admins
 (
-    group_id BIGINT NOT NULL,
+    group_id BIGINT      NOT NULL,
     user_id  VARCHAR(36) NOT NULL,
     PRIMARY KEY (group_id, user_id),
     CONSTRAINT fk_group_members_groups FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
@@ -88,9 +88,48 @@ CREATE TABLE IF NOT EXISTS user_friends
 
 CREATE TABLE IF NOT EXISTS users_roles
 (
-    user_id VARCHAR(36)       NOT NULL,
+    user_id VARCHAR(36)  NOT NULL,
     role    VARCHAR(255) NOT NULL,
     PRIMARY KEY (user_id, role),
     CONSTRAINT fk_users_roles_users FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE NO ACTION
 );
 
+CREATE TABLE conversations
+(
+    id         VARCHAR(36) PRIMARY KEY,
+    is_group   BOOLEAN,
+    title      VARCHAR(255),
+    created_at TIMESTAMP,
+    deleted    BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE conversation_members
+(
+    conversation_id VARCHAR(36),
+    user_id         VARCHAR(36),
+    PRIMARY KEY (conversation_id, user_id)
+);
+
+CREATE TABLE messages
+(
+    id              VARCHAR(36) PRIMARY KEY,
+    conversation_id VARCHAR(36),
+    sender_id       VARCHAR(36),
+    content         TEXT,
+    status          VARCHAR(20),
+    deleted         BOOLEAN DEFAULT FALSE,
+    created_at      TIMESTAMP,
+    CONSTRAINT fk_msg_conv FOREIGN KEY (conversation_id) REFERENCES conversations (id),
+    CONSTRAINT fk_msg_sender FOREIGN KEY (sender_id) REFERENCES users (id)
+);
+
+CREATE TABLE message_attachments
+(
+    id           VARCHAR(36) PRIMARY KEY,
+    message_id   VARCHAR(36),
+    file_url     TEXT,
+    file_name    VARCHAR(255),
+    content_type VARCHAR(100),
+    file_size    BIGINT,
+    CONSTRAINT fk_att_msg FOREIGN KEY (message_id) REFERENCES messages (id)
+);

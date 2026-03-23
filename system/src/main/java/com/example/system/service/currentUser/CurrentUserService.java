@@ -19,7 +19,13 @@ public class CurrentUserService {
         String userId = jwt.getSubject();
 
         return userRepository.findById(userId)
-                .orElseGet(() -> createUserFromJwt(jwt));
+                .orElseGet(() -> {
+                    try {
+                        return createUserFromJwt(jwt);
+                    } catch (Exception e) {
+                        return userRepository.findById(userId).orElseThrow();
+                    }
+                });
     }
 
     private User createUserFromJwt(Jwt jwt) {

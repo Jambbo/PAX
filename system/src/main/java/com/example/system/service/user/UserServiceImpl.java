@@ -6,6 +6,7 @@ import com.example.system.repository.UserRepository;
 import com.example.system.rest.dto.mapper.UserMapper;
 import com.example.system.rest.dto.user.UserWriteDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -80,6 +81,13 @@ public class UserServiceImpl implements UserService {
     @Override
     public Long getUsersCount() {
         return userRepository.count();
+    }
+
+    @Override
+    public List<User> findLatestUsers(int limit) {
+        return userRepository
+                .findLatestUsers(PageRequest.of(0, limit))
+                .getContent();
     }
 
 
