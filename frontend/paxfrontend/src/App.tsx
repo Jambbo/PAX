@@ -1,65 +1,42 @@
-import { Outlet } from 'react-router-dom';
-import React, { useState, useEffect } from 'react';
-import { Header } from "./widgets/header";
-import { Sidebar } from "./widgets/sidebar";
+import {Outlet} from 'react-router-dom';
+import React, {useState, useEffect} from 'react';
+import {Header} from "./widgets/header";
+import {Sidebar} from "./widgets/sidebar";
 import {useTokenRefresh} from "./features/Auth/useTokenRefresh";
+import {useAuth} from "./features/Auth/useAuth";
 
 const App: React.FC = () => {
     useTokenRefresh();
+    const {authenticated} = useAuth();
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
-        const initTheme = () => {
-            const savedTheme = localStorage.getItem('site_theme') || 'Dark';
-            const root = window.document.documentElement;
+        const savedTheme = localStorage.getItem('site_theme') || 'Dark';
+        const root = window.document.documentElement;
 
-            root.classList.remove('dark');
+        root.classList.remove('dark');
 
-            if (savedTheme === 'Dark') {
+        if (savedTheme === 'Dark') {
+            root.classList.add('dark');
+        } else if (savedTheme === 'Auto') {
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
                 root.classList.add('dark');
-            } else if (savedTheme === 'Auto') {
-                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    root.classList.add('dark');
-                }
             }
-        };
-
-        initTheme();
+        }
     }, []);
 
-    useEffect(() => {
-
-        const handler = () => {
-            const token = localStorage.getItem("access_token");
-            setIsAuthenticated(Boolean(token));
-        };
-
-        handler();
-
-        window.addEventListener("auth-change", handler);
-        window.addEventListener("storage", handler);
-
-        return () => {
-            window.removeEventListener("auth-change", handler);
-            window.removeEventListener("storage", handler);
-        };
-
-    }, []);
-
-    const toggleSidebar = () => {
-        setIsSidebarOpen(!isSidebarOpen);
-    };
+    const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white transition-colors duration-300">
+        <div
+            className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white transition-colors duration-300">
 
-            <Header isAuthenticated={isAuthenticated} />
+            <Header isAuthenticated={authenticated}/>
 
             <Sidebar
                 isOpen={isSidebarOpen}
                 toggleMenu={toggleSidebar}
-                isAuthenticated={isAuthenticated}
+                isAuthenticated={authenticated}
             />
 
             <main
@@ -68,7 +45,7 @@ const App: React.FC = () => {
                 }`}
             >
                 <div className="p-6">
-                    <Outlet />
+                    <Outlet/>
                 </div>
             </main>
         </div>

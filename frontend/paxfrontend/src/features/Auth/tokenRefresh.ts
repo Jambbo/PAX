@@ -19,7 +19,9 @@ export const refreshAccessToken = async () => {
     );
 
     if (!res.ok) {
-        localStorage.clear();
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        localStorage.removeItem("expires_at");
         window.location.href = "/";
         return false;
     }
