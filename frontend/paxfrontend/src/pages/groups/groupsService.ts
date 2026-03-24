@@ -25,6 +25,25 @@ export interface CreateGroupDto {
     location?: string;
 }
 
+export async function fetchGroupById(id: number): Promise<Group> {
+    const token = localStorage.getItem("access_token");
+    const headers: HeadersInit = {
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        "Content-Type": "application/json"
+    };
+
+    const response = await fetch(`${API_URL}/${id}`, {
+        method: "GET",
+        headers,
+        mode: "cors"
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to load group: ${response.status}`);
+    }
+
+    return response.json();
+}
 
 export async function fetchAllGroups(): Promise<Group[]> {
     const token = localStorage.getItem("access_token");
@@ -145,4 +164,51 @@ export async function createGroup(data: any) {
 
     return response.json();
 
+}
+
+export async function deleteGroup(groupId: number): Promise<void> {
+    const token = localStorage.getItem("access_token");
+    if (!token) throw new Error("Ви не авторизовані");
+
+    const response = await fetch(`http://localhost:8081/api/v1/groups/${groupId}`, {
+        method: "DELETE",
+        headers: {
+            "Authorization": `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error("Не вдалося видалити групу");
+    }
+}
+
+export async function updateGroup(groupId: number, data: any): Promise<Group> {
+    const token = localStorage.getItem("access_token");
+
+    // Формуємо об'єкт точно під ваш GroupWriteDto
+    const payload = {
+        id: groupId,
+        name: data.name,
+        description: data.description,
+        groupPrivacy: data.visibility ? data.visibility.toUpperCase() : "PUBLIC",
+        location: data.location || "Online",
+        ownerId: null
+    };
+
+    const response = await fetch(`http://localhost:8081/api/v1/groups/${groupId}`, {
+        method: "PUT",
+        headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Бекенд відхилив запит на оновлення. Деталі:", errorData);
+        throw new Error("Failed to update group");
+    }
+
+    return response.json();
 }

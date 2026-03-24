@@ -30,6 +30,7 @@ import java.util.List; // ДОДАНО
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
+
 public class SecurityConfig {
 
     private final UserProvisioningFilter userProvisioningFilter;
@@ -93,6 +94,12 @@ public class SecurityConfig {
                                 "/error",
                                 "/ws/**"
                         ).permitAll()
+
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                "/api/v1/groups/**",
+                                "/api/v1/posts/**"
+                        ).permitAll()
+
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated()
                 )

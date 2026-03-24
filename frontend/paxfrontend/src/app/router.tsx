@@ -9,6 +9,7 @@ import { BookmarksPage } from "../pages/bookmarks";
 import { NotificationsPage } from "../pages/notifications";
 import { ProfilePage} from "../pages/profile/ui/profilePage";
 import { AuthCallback } from "../features/Auth/AuthCallback";
+import { GroupDetailsPage } from '../pages/groups/GroupDetailsPage/ui/GroupDetailsPage';
 
 
 export const router = createBrowserRouter([
@@ -22,13 +23,16 @@ export const router = createBrowserRouter([
             { path: "messages", element: <MessagesPage /> },
             { path: "trending", element: <TrendingPage /> },
             { path: "groups", element: <GroupsPage /> },
+
+            // ↓↓↓ ДОДАНО ОСЬ ЦЕЙ РЯДОК ↓↓↓
+            { path: "groups/:id", element: <GroupDetailsPage /> },
+
             { path: "bookmarks", element: <BookmarksPage /> },
-            { path: "notifications", element: <NotificationsPage /> }, // ← добавлено
-            {path: "profile", element: <ProfilePage />},
+            { path: "notifications", element: <NotificationsPage /> },
+            { path: "profile", element: <ProfilePage />},
 
             { path: "settings", element: <SettingsPage /> },
 
-            // убрал ведущий слэш
             { path: "auth/callback", element: <AuthCallback /> },
         ],
     },

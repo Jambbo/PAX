@@ -1,19 +1,13 @@
-// postsService.ts
-
 const API_URL = "http://localhost:8081/api/v1/posts";
-
-// Описуємо тип поста, який приходить з бекенду (підкоригуй поля, якщо бекенд віддає інші назви)
-// postsService.ts
 
 export interface Post {
     id: number;
-    text: string;           // У базі це String text;
-    views: number;          // У базі це Long views;
-    likes: number;          // У базі це Long likes;
+    text: string;
+    views: number;
+    likes: number;
     createdAt: string;
     updatedAt: string;
 
-    // Ці поля прийдуть з DTO (дані з пов'язаних таблиць Author та Group)
     authorUsername?: string;
     authorId?: string;
     groupId?: number;
@@ -23,45 +17,63 @@ export interface Post {
     images?: string[];
 }
 
-// Функція для отримання всіх постів
-
-
+// === ФУНКЦІЯ ДЛЯ ОТРИМАННЯ ВСІХ ПОСТІВ (ВІДНОВЛЕНО) ===
 export async function fetchAllPosts(): Promise<Post[]> {
     const token = localStorage.getItem("access_token");
-
     const headers: HeadersInit = {
         ...(token ? { "Authorization": `Bearer ${token}` } : {}),
         "Content-Type": "application/json"
     };
 
-    const response = await fetch(`${API_URL}/all`, {
+    // Додаємо відключення кешу, щоб на головній сторінці пости теж не зникали
+    const response = await fetch(`${API_URL}/all?t=${new Date().getTime()}`, {
         method: "GET",
         headers,
+        cache: "no-store",
         mode: "cors"
     });
 
     if (!response.ok) {
-        throw new Error(`Failed to load posts: ${response.status}`);
+        throw new Error("Не вдалося завантажити всі пости");
     }
 
     return response.json();
 }
 
-// Додай це в кінець файлу postServise.ts
+// === ФУНКЦІЯ ДЛЯ ОТРИМАННЯ ПОСТІВ ГРУПИ ===
+export async function fetchGroupPosts(groupId: number): Promise<Post[]> {
+    const token = localStorage.getItem("access_token");
+    const headers: HeadersInit = {
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        "Content-Type": "application/json"
+    };
+
+    const response = await fetch(`${API_URL}/group/${groupId}?t=${new Date().getTime()}`, {
+        method: "GET",
+        headers,
+        cache: "no-store",
+        mode: "cors"
+    });
+
+    if (!response.ok) {
+        throw new Error("Не вдалося завантажити пости групи");
+    }
+
+    return response.json();
+}
+
 
 export interface CreatePostDto {
     text: string;
     groupId: number;
-    // images: string[] - поки що залишаємо без картинок для простоти
 }
 
+// === ФУНКЦІЯ СТВОРЕННЯ ПОСТА ===
 export async function createPost(data: CreatePostDto): Promise<Post> {
     const token = localStorage.getItem("access_token");
     if (!token) throw new Error("Ви не авторизовані");
 
-    // ПРИМІТКА: Перевір, який саме URL у вашого PostController на бекенді.
-    // Зазвичай це /api/v1/posts
-    const response = await fetch("http://localhost:8081/api/v1/posts", {
+    const response = await fetch(API_URL, {
         method: "POST",
         headers: {
             "Authorization": `Bearer ${token}`,
@@ -75,4 +87,18 @@ export async function createPost(data: CreatePostDto): Promise<Post> {
     }
 
     return response.json();
+}
+
+export async function deletePost(postId: number): Promise<void> {
+    const token = localStorage.getItem("access_token");
+    const response = await fetch(`http://localhost:8081/api/v1/posts/${postId}`, {
+        method: "DELETE",
+        headers: {
+            "Authorization": `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error("Не вдалося видалити пост");
+    }
 }
