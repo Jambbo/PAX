@@ -1,4 +1,4 @@
-import { generatePKCE } from "./pkce";
+import {generatePKCE} from "./pkce";
 
 const KEYCLOAK_URL = "http://localhost:8080";
 const REALM = "pax";
@@ -19,7 +19,7 @@ const getInfoFromToken = () => {
 
 export async function login() {
 
-    const { codeVerifier, codeChallenge } = await generatePKCE();
+    const {codeVerifier, codeChallenge} = await generatePKCE();
     localStorage.setItem("pkce_code_verifier", codeVerifier);
     const params = new URLSearchParams({
         client_id: CLIENT_ID,
@@ -37,6 +37,8 @@ export async function login() {
 export function logout() {
 
     localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("expires_at");
 
 
     const logoutUrl = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/logout` +
