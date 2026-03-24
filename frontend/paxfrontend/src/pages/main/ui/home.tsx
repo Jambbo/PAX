@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, MessageSquare, Users, Eye, Loader2, Heart, X, Image as ImageIcon, Send } from 'lucide-react';
-import { fetchAllPosts, createPost, Post } from '../postServise';
-import {fetchUsersCount, Group} from '../../groups/groupsService';
-import { fetchMyGroups} from "../../groups/groupsService";
+import { TrendingUp, MessageSquare, Users, Eye, Loader2, Heart, X, Image as ImageIcon, Send, Trash2, AlertTriangle } from 'lucide-react';
+import { fetchAllPosts, createPost, deletePost, Post } from '../postServise';
+import { fetchUsersCount, Group, fetchMyGroups } from '../../groups/groupsService';
 
 // --- Компонент Модального вікна для перегляду фото (LightBox) ---
 interface ImageModalProps {
@@ -86,17 +85,30 @@ export const Home: React.FC = () => {
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [newPostText, setNewPostText] = useState("");
     const [myGroups, setMyGroups] = useState<Group[]>([]);
     const [selectedGroupId, setSelectedGroupId] = useState<number | "">("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Стейт для модалки видалення поста
+    const [postToDeleteId, setPostToDeleteId] = useState<number | null>(null);
+    const [isDeletingPost, setIsDeletingPost] = useState(false);
+
     useEffect(() => {
         // Перевіряємо, чи юзер авторизований
         const token = localStorage.getItem("access_token");
-        if (token) {
+        if (token && token !== "undefined") {
             setIsLoggedIn(true);
+            try {
+                // Дістаємо ID поточного юзера з токена, щоб знати, які пости його
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                setCurrentUserId(payload.sub);
+            } catch (e) {
+                console.error("Помилка парсингу токена", e);
+            }
+
             // Завантажуємо групи юзера для випадаючого списку
             fetchMyGroups().then(groups => {
                 setMyGroups(groups);
@@ -104,6 +116,9 @@ export const Home: React.FC = () => {
                     setSelectedGroupId(groups[0].id);
                 }
             }).catch(console.error);
+        } else {
+            setIsLoggedIn(false);
+            setCurrentUserId(null);
         }
 
         // Завантажуємо всі пости
@@ -112,7 +127,7 @@ export const Home: React.FC = () => {
             setError(null);
             try {
                 const data = await fetchAllPosts();
-                setPosts(data.reverse());
+                setPosts([...data].reverse());
             } catch (err: any) {
                 console.error("Помилка завантаження постів:", err);
                 setError("Не вдалося завантажити останні обговорення.");
@@ -147,6 +162,21 @@ export const Home: React.FC = () => {
             alert("Помилка при створенні поста. Можливо, сервер відхилив запит.");
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    // Обробник підтвердження видалення поста
+    const confirmDeletePost = async () => {
+        if (postToDeleteId === null) return;
+        setIsDeletingPost(true);
+        try {
+            await deletePost(postToDeleteId);
+            setPosts(posts.filter(p => p.id !== postToDeleteId));
+            setPostToDeleteId(null);
+        } catch (err) {
+            alert("Помилка при видаленні поста. Можливо, у вас немає прав.");
+        } finally {
+            setIsDeletingPost(false);
         }
     };
 
@@ -244,7 +274,6 @@ export const Home: React.FC = () => {
                 <div className={`bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800/50 rounded-xl mb-8 shadow-sm overflow-hidden transition-all duration-300 ease-in-out ${isCreating ? `ring-2 ring-${accentColor}-500/50` : ''}`}>
 
                     {!isCreating ? (
-                        // Згорнутий стан
                         <div
                             onClick={() => setIsCreating(true)}
                             className="p-4 flex items-center gap-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -260,7 +289,6 @@ export const Home: React.FC = () => {
                             </div>
                         </div>
                     ) : (
-                        // Розгорнутий стан
                         <div className="p-4 animate-fadeIn">
                             <div className="flex gap-4">
                                 <div className={`w-10 h-10 rounded-full bg-${accentColor}-100 dark:bg-${accentColor}-900/30 flex items-center justify-center font-bold text-${accentColor}-600 shrink-0`}>
@@ -348,10 +376,24 @@ export const Home: React.FC = () => {
                     {!isLoading && !error && posts.map((post) => (
                         <div
                             key={post.id}
-                            className="bg-gray-50 dark:bg-gray-800/20 border border-gray-200 dark:border-gray-700/50 rounded-2xl p-5 hover:border-gray-300 dark:hover:border-gray-600 transition-all cursor-pointer group shadow-sm"
+                            className="bg-gray-50 dark:bg-gray-800/20 border border-gray-200 dark:border-gray-700/50 rounded-2xl p-5 hover:border-gray-300 dark:hover:border-gray-600 transition-all cursor-pointer group relative shadow-sm"
                             onClick={() => console.log("Відкрити пост", post.id)}
                         >
-                            <div className="flex items-start justify-between mb-3">
+                            {/* КНОПКА ВИДАЛЕННЯ ПОСТА (Видима тільки автору поста) */}
+                            {post.authorId === currentUserId && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation(); // Важливо! Зупиняємо клік, щоб не відкрити пост
+                                        setPostToDeleteId(post.id);
+                                    }}
+                                    className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                    title="Delete Post"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            )}
+
+                            <div className="flex items-start justify-between mb-3 pr-8">
                                 <div>
                                     <span className={`inline-block text-xs font-medium bg-${accentColor}-100 dark:bg-${accentColor}-600/20 text-${accentColor}-700 dark:text-${accentColor}-300 px-2.5 py-1 rounded-full mb-2 transition-colors`}>
                                         {post.groupName || `Group ID: ${post.groupId}`}
@@ -396,6 +438,56 @@ export const Home: React.FC = () => {
                     imageUrl={selectedImage}
                     onClose={() => setSelectedImage(null)}
                 />
+            )}
+
+            {/* === МОДАЛКА ПІДТВЕРДЖЕННЯ ВИДАЛЕННЯ ПОСТА === */}
+            {postToDeleteId !== null && (
+                <div
+                    className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn"
+                    onClick={() => setPostToDeleteId(null)}
+                >
+                    <div
+                        className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-zoomIn relative"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={() => setPostToDeleteId(null)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                        >
+                            <X size={24} />
+                        </button>
+
+                        <div className="flex flex-col items-center text-center mt-4">
+                            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mb-4">
+                                <AlertTriangle size={32} />
+                            </div>
+
+                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                                Delete Post?
+                            </h3>
+
+                            <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
+                                Are you sure you want to delete this post? This action cannot be undone.
+                            </p>
+
+                            <div className="flex gap-3 w-full">
+                                <button
+                                    onClick={() => setPostToDeleteId(null)}
+                                    className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-white rounded-xl font-medium transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmDeletePost}
+                                    disabled={isDeletingPost}
+                                    className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors shadow-lg shadow-red-500/30 flex justify-center items-center gap-2 disabled:opacity-50"
+                                >
+                                    {isDeletingPost ? <Loader2 size={18} className="animate-spin" /> : "Delete"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
