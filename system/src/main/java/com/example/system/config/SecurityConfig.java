@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer; // ДОДАНО
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -19,12 +19,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration; // ДОДАНО
-import org.springframework.web.cors.CorsConfigurationSource; // ДОДАНО
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource; // ДОДАНО
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays; // ДОДАНО
-import java.util.List; // ДОДАНО
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -41,7 +41,6 @@ public class SecurityConfig {
     }
 
 
-    // НОВИЙ БІН ДЛЯ НАЛАШТУВАННЯ CORS
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -88,16 +87,11 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/public/**",
                                 "/actuator/**",
-                                "/api/v1/groups/all",
-                                "/api/v1/posts/all",
+                                "/api/v1/groups/**",
+                                "/api/v1/posts/**",
                                 "/api/v1/users/count",
                                 "/error",
                                 "/ws/**"
-                        ).permitAll()
-
-                        .requestMatchers(org.springframework.http.HttpMethod.GET,
-                                "/api/v1/groups/**",
-                                "/api/v1/posts/**"
                         ).permitAll()
 
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
