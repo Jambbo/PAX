@@ -9,7 +9,7 @@ import { BookmarksPage } from "../pages/bookmarks";
 import { NotificationsPage } from "../pages/notifications";
 import { ProfilePage} from "../pages/profile/ui/profilePage";
 import { AuthCallback } from "../features/Auth/AuthCallback";
-import { GroupDetailsPage } from '../pages/groups/GroupDetailsPage/ui/GroupDetailsPage';
+import { GroupDetailsPage } from '../pages/groups/GroupDetailsPage';
 
 
 export const router = createBrowserRouter([
@@ -33,6 +33,7 @@ export const router = createBrowserRouter([
 
             { path: "settings", element: <SettingsPage /> },
 
+            { path: "profile/:id", element: <ProfilePage />},
             { path: "auth/callback", element: <AuthCallback /> },
         ],
     },

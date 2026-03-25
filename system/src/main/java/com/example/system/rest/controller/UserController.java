@@ -26,7 +26,6 @@ public class UserController {
     private final UserService userService;
     private final UserMapper userMapper;
 
-
     @GetMapping("/{id}")
     public ResponseEntity<UserReadResponseDto> getById(@PathVariable("id") final String userId) {
         UserReadResponseDto dto = userMapper.toDto(userService.findUserById(userId));
@@ -45,6 +44,7 @@ public class UserController {
         return ResponseEntity.ok(dto);
     }
 
+    // ОСЬ ЦЕЙ МЕТОД ВЖЕ ЧУДОВО ОБРОБЛЯЄ ЗБЕРЕЖЕННЯ НАЛАШТУВАНЬ!
     @PutMapping("/{id}")
     public ResponseEntity<UserReadResponseDto> update(
             @PathVariable("id") final String userId,
@@ -104,6 +104,4 @@ public class UserController {
 
         return ResponseEntity.ok(userMapper.toDto(users));
     }
-
-
 }

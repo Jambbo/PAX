@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom'; // ДОДАНО ІМПОРТ LINK! Без нього все ламалося
 import { TrendingUp, MessageSquare, Users, Eye, Loader2, Heart, X, Image as ImageIcon, Send, Trash2, AlertTriangle } from 'lucide-react';
 import { fetchAllPosts, createPost, deletePost, Post } from '../postServise';
 import { fetchUsersCount, Group, fetchMyGroups } from '../../groups/groupsService';
@@ -408,11 +409,17 @@ export const Home: React.FC = () => {
                             {renderPostImages(post.images)}
 
                             <div className="flex items-center justify-between gap-4 text-sm text-gray-500 dark:text-gray-400 pt-4 border-t border-gray-100 dark:border-gray-700/50">
+
+                                {/* === КЛІКАБЕЛЬНА АВАТАРКА І ІМ'Я === */}
                                 <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-500 uppercase text-xs border border-gray-300 dark:border-gray-600">
-                                        {post.authorUsername ? post.authorUsername[0] : '?'}
-                                    </div>
-                                    <span>by <span className="font-medium text-gray-700 dark:text-gray-200">{post.authorUsername || `User ID: ${post.authorId}`}</span></span>
+                                    <Link to={`/profile/${post.authorId}`} onClick={(e) => e.stopPropagation()} className="shrink-0">
+                                        <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-500 uppercase text-xs border border-gray-300 dark:border-gray-600 hover:scale-105 transition-transform">
+                                            {post.authorUsername ? post.authorUsername[0] : '?'}
+                                        </div>
+                                    </Link>
+                                    <span>by <Link to={`/profile/${post.authorId}`} onClick={(e) => e.stopPropagation()} className={`font-medium text-gray-700 dark:text-gray-200 hover:text-${accentColor}-600 transition-colors`}>
+                                        {post.authorUsername || `User ID: ${post.authorId}`}
+                                    </Link></span>
                                 </div>
 
                                 <div className="flex items-center gap-6">

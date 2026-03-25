@@ -14,8 +14,9 @@ import {
     Hash,
     Calendar
 } from "lucide-react";
-import { Link } from "react-router-dom";
-import {logout} from "../../../features/Auth/authService";
+// ДОДАНО useLocation ↓
+import { Link, useLocation } from "react-router-dom";
+import { logout } from "../../../features/Auth/authService";
 
 interface SidebarProps {
     isOpen: boolean;
@@ -25,6 +26,24 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleMenu, isAuthenticated }) => {
     const [activeItem, setActiveItem] = useState("home");
+
+    // Ініціалізуємо хук для відслідковування URL
+    const location = useLocation();
+
+    // --- ЛОГІКА СИНХРОНІЗАЦІЇ САЙДБАРУ З URL ---
+    useEffect(() => {
+        // Беремо першу частину шляху (наприклад, з "/groups/123" дістанемо "groups")
+        const pathSegment = location.pathname.split('/')[1];
+
+        // Якщо шлях пустий (ми на головній "/") або це "home"
+        if (!pathSegment || pathSegment === 'home') {
+            setActiveItem("home");
+        } else {
+            // Інакше ставимо активним поточний розділ
+            setActiveItem(pathSegment);
+        }
+    }, [location.pathname]); // Спрацьовує щоразу, коли змінюється URL
+    // ------------------------------------------
 
     // --- ЛОГІКА КОЛЬОРІВ ---
     const [accentColor, setAccentColor] = useState(() => {
@@ -88,7 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleMenu, isAuthenti
             {/* Main Navigation */}
             <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-800 scrollbar-track-transparent">
                 {menuItems.map((item) => (
-                    <Link to={`${item.id}`} key={item.id}>
+                    <Link to={`/${item.id === 'home' ? '' : item.id}`} key={item.id}>
                         <button
                             onClick={() => setActiveItem(item.id)}
                             className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group relative mb-1
@@ -165,10 +184,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleMenu, isAuthenti
                     </button>
                 </Link>
 
-                {/* Logout button (залишив червоним, бо це деструктивна дія) */}
+                {/* Logout button */}
                 {isAuthenticated && (
                     <button onClick={logout}
-                        className="w-full flex items-center gap-3 px-3 py-3 rounded-lg bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white transition-all duration-200 shadow-lg shadow-red-500/20"
+                            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white transition-all duration-200 shadow-lg shadow-red-500/20"
                     >
                         <LogOut size={20} className="flex-shrink-0" />
                         {isOpen && <span className="text-sm font-medium">Logout</span>}
