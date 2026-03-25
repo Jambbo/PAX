@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 // ПЕРЕВІР ЦІ ШЛЯХИ ДО СВОЇХ СЕРВІСІВ!
-import { fetchUserById } from './userService';
+import { fetchUserById } from '../userService';
 import { fetchAllPosts, deletePost, Post } from '../../main/postServise';
 
 // --- Модалка для перегляду фото ---
@@ -81,12 +81,11 @@ export const ProfilePage: React.FC = () => {
                 setIsOwnProfile(targetUserId === currentUserId);
 
                 // Завантажуємо профіль
-                const data = await fetchUserById(targetUserId);
-
+                const data = await fetchUserById(targetUserId as string);
                 // Завантажуємо всі пости і фільтруємо пости тільки цього юзера
                 try {
                     const allPosts = await fetchAllPosts();
-                    const filteredPosts = allPosts.filter((p: Post) => p.authorId === targetUserId);
+                    const filteredPosts = allPosts.filter((p: Post) => p.authorId === (targetUserId as string));
                     setUserPosts(filteredPosts.reverse());
                 } catch (postErr) {
                     console.error("Не вдалося завантажити пости юзера:", postErr);
