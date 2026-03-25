@@ -9,25 +9,15 @@ export interface UserData {
     bio?: string;
     location?: string;
     website?: string;
-    // аватарка та інші поля, якщо вони є на бекенді
-}
-
-// Отримуємо поточного юзера з токена
-export async function fetchCurrentUser(): Promise<UserData> {
-    const token = localStorage.getItem("access_token");
-    if (!token) throw new Error("Ви не авторизовані");
-
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const userId = payload.sub;
-
-    return fetchUserById(userId); // Перевикористовуємо функцію нижче
 }
 
 // Отримуємо БУДЬ-ЯКОГО юзера за його ID
 export async function fetchUserById(userId: string): Promise<UserData> {
     const token = localStorage.getItem("access_token");
     const headers: HeadersInit = { "Content-Type": "application/json" };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (token && token !== "undefined") {
+        headers["Authorization"] = `Bearer ${token}`;
+    }
 
     const response = await fetch(`${API_URL}/${userId}`, {
         method: "GET",
@@ -38,12 +28,22 @@ export async function fetchUserById(userId: string): Promise<UserData> {
     return response.json();
 }
 
+// Отримуємо поточного юзера з токена
+export async function fetchCurrentUser(): Promise<UserData> {
+    const token = localStorage.getItem("access_token");
+    if (!token || token === "undefined") throw new Error("Ви не авторизовані");
+
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const userId = payload.sub;
+
+    return fetchUserById(userId);
+}
+
 // Оновлюємо дані юзера
 export async function updateUser(userId: string, data: any): Promise<UserData> {
     const token = localStorage.getItem("access_token");
-    if (!token) throw new Error("Ви не авторизовані");
+    if (!token || token === "undefined") throw new Error("Ви не авторизовані");
 
-    // Формуємо об'єкт (тут мають бути ті поля, які приймає твій UserWriteDto)
     const payload = {
         username: data.username,
         email: data.email,
@@ -53,7 +53,7 @@ export async function updateUser(userId: string, data: any): Promise<UserData> {
     };
 
     const response = await fetch(`${API_URL}/${userId}`, {
-        method: "PUT", // Або PATCH, залежить від твого бекенду
+        method: "PUT",
         headers: {
             "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json"
@@ -62,8 +62,6 @@ export async function updateUser(userId: string, data: any): Promise<UserData> {
     });
 
     if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        console.error("Бекенд відхилив оновлення:", err);
         throw new Error("Не вдалося оновити профіль");
     }
     return response.json();

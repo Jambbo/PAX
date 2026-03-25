@@ -6,11 +6,11 @@ import {
     Globe, Hash, Loader2, Trash2, AlertTriangle, X
 } from 'lucide-react';
 
-// ІМПОРТИ (ПЕРЕВІР ШЛЯХИ ДО СВОЇХ ФАЙЛІВ!)
-import { fetchUserById } from '../userService';
-import { fetchAllPosts, deletePost, Post } from '../../main/postServise'; // Шлях може відрізнятися, перевір його!
+// ПЕРЕВІР ЦІ ШЛЯХИ ДО СВОЇХ СЕРВІСІВ!
+import { fetchUserById } from './userService';
+import { fetchAllPosts, deletePost, Post } from '../../main/postServise';
 
-// --- Компонент Модального вікна для перегляду фото ---
+// --- Модалка для перегляду фото ---
 interface ImageModalProps {
     imageUrl: string;
     onClose: () => void;
@@ -31,19 +31,22 @@ const ImageModal: React.FC<ImageModalProps> = ({ imageUrl, onClose }) => {
         </div>
     );
 };
-// ------------------------------------------------------
+// ----------------------------------
 
 export const ProfilePage: React.FC = () => {
+    // 1. Читаємо ID з URL (якщо перейшли на чужий профіль)
     const { id } = useParams<{ id: string }>();
 
     const [accentColor, setAccentColor] = useState(() => localStorage.getItem('site_accent_color') || 'purple');
 
-    // --- СТЕЙТИ ---
+    // Стейти
     const [profile, setProfile] = useState<any>(null);
-    const [userPosts, setUserPosts] = useState<Post[]>([]); // Стейт для постів юзера
+    const [userPosts, setUserPosts] = useState<Post[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'posts' | 'replies' | 'bookmarks'>('posts');
     const [isEditOpen, setIsEditOpen] = useState(false);
+
+    // Стейт, щоб розуміти чи це наш профіль
     const [isOwnProfile, setIsOwnProfile] = useState(false);
 
     // Стейт для модалки фото та видалення поста
@@ -51,7 +54,7 @@ export const ProfilePage: React.FC = () => {
     const [postToDeleteId, setPostToDeleteId] = useState<number | null>(null);
     const [isDeletingPost, setIsDeletingPost] = useState(false);
 
-    // --- ЗАВАНТАЖЕННЯ ДАНИХ З БЕКЕНДУ ---
+    // Завантаження даних
     useEffect(() => {
         const loadProfileAndPosts = async () => {
             setIsLoading(true);
@@ -66,6 +69,7 @@ export const ProfilePage: React.FC = () => {
                     } catch (e) { console.error("Помилка парсингу токена", e); }
                 }
 
+                // 2. Визначаємо цільового юзера: беремо ID з URL, а якщо його немає - свій ID
                 const targetUserId = id || currentUserId;
 
                 if (!targetUserId) {
@@ -73,17 +77,17 @@ export const ProfilePage: React.FC = () => {
                     return;
                 }
 
+                // 3. Зберігаємо інфу про те, чий це профіль
                 setIsOwnProfile(targetUserId === currentUserId);
 
-                // 1. Вантажимо профіль
+                // Завантажуємо профіль
                 const data = await fetchUserById(targetUserId);
 
-                // 2. Вантажимо всі пости і фільтруємо тільки ті, що належать цьому юзеру
-                // (В ідеалі для цього треба зробити окремий ендпоінт на бекенді, але поки фільтруємо тут)
+                // Завантажуємо всі пости і фільтруємо пости тільки цього юзера
                 try {
                     const allPosts = await fetchAllPosts();
                     const filteredPosts = allPosts.filter((p: Post) => p.authorId === targetUserId);
-                    setUserPosts(filteredPosts.reverse()); // Нові зверху
+                    setUserPosts(filteredPosts.reverse());
                 } catch (postErr) {
                     console.error("Не вдалося завантажити пости юзера:", postErr);
                 }
@@ -111,9 +115,9 @@ export const ProfilePage: React.FC = () => {
         };
 
         loadProfileAndPosts();
-    }, [id, accentColor]);
+    }, [id, accentColor]); // Важливо: id має бути в залежностях!
 
-    // --- ФУНКЦІЯ ВИДАЛЕННЯ ПОСТА ---
+    // Функція видалення поста
     const confirmDeletePost = async () => {
         if (postToDeleteId === null) return;
         setIsDeletingPost(true);
@@ -128,7 +132,6 @@ export const ProfilePage: React.FC = () => {
         }
     };
 
-    // --- ФУНКЦІЯ РЕНДЕРУ КАРТИНОК ---
     const renderPostImages = (images: string[] | undefined) => {
         if (!images || images.length === 0) return null;
         const count = images.length;
@@ -139,9 +142,7 @@ export const ProfilePage: React.FC = () => {
                 {images.map((imgUrl, index) => (
                     <div key={index} className="relative aspect-video group overflow-hidden bg-gray-100 dark:bg-gray-800 cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedImage(imgUrl); }}>
                         <img src={imgUrl} alt={`Post image ${index + 1}`} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <Eye className="text-white" size={24} />
-                        </div>
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><Eye className="text-white" size={24} /></div>
                     </div>
                 ))}
             </div>
@@ -154,7 +155,7 @@ export const ProfilePage: React.FC = () => {
 
     return (
         <div className="max-w-7xl mx-auto pb-10 animate-fadeIn">
-            {/* ==================== БАНЕР ТА АВАТАРКА ==================== */}
+            {/* Банер та Аватарка */}
             <div className={`h-64 md:h-80 w-full rounded-3xl bg-gradient-to-r ${profile.bannerGradient} relative shadow-xl mb-24`}>
                 <div className="absolute -bottom-16 left-8 md:left-12 flex items-end gap-6">
                     <div className="relative group cursor-pointer">
@@ -165,12 +166,13 @@ export const ProfilePage: React.FC = () => {
                 </div>
 
                 <div className="absolute -bottom-14 right-4 md:right-8 flex gap-3">
+                    {/* КНОПКИ ЗМІНЮЮТЬСЯ ЗАЛЕЖНО ВІД ТОГО, ЧИЙ ЦЕ ПРОФІЛЬ */}
                     {isOwnProfile ? (
                         <>
                             <button onClick={() => setIsEditOpen(true)} className={`px-5 py-2.5 bg-${accentColor}-600 hover:bg-${accentColor}-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-${accentColor}-500/30 flex items-center gap-2`}>
                                 <Edit3 size={18} /> <span className="hidden sm:block">Edit Profile</span>
                             </button>
-                            <Link to="/settings" className="p-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-bold transition-all flex items-center shadow-md" title="Settings">
+                            <Link to="/settings" className="p-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-bold transition-all flex items-center shadow-md">
                                 <Settings size={20} />
                             </Link>
                         </>
@@ -183,7 +185,7 @@ export const ProfilePage: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-8">
-                {/* ==================== ЛІВА КОЛОНКА (ІНФО ПРО ЮЗЕРА) ==================== */}
+                {/* ЛІВА КОЛОНКА */}
                 <div className="lg:col-span-1 space-y-6">
                     <div>
                         <div className="flex items-center gap-3 mb-1">
@@ -205,6 +207,7 @@ export const ProfilePage: React.FC = () => {
 
                         <div className="space-y-4 text-sm">
                             {profile.location && <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400"><MapPin size={18} className="text-gray-400" /><span>{profile.location}</span></div>}
+                            {/* Пошту показуємо ТІЛЬКИ власнику профілю з міркувань приватності */}
                             {isOwnProfile && profile.email && <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400"><Mail size={18} className="text-gray-400" /><span>{profile.email}</span></div>}
                             <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400"><Calendar size={18} className="text-gray-400" /><span>Joined {profile.joinDate}</span></div>
                             {profile.website && <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400"><LinkIcon size={18} className={`text-${accentColor}-500`} /><a href={profile.website} target="_blank" rel="noopener noreferrer" className={`hover:text-${accentColor}-600 font-medium transition-colors`}>{profile.website.replace(/^https?:\/\//, '')}</a></div>}
@@ -216,7 +219,6 @@ export const ProfilePage: React.FC = () => {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm text-center">
                                 <p className="text-gray-500 text-xs font-semibold uppercase mb-1">Posts</p>
-                                {/* Динамічна кількість постів! */}
                                 <p className="text-2xl font-black text-gray-900 dark:text-white">{userPosts.length}</p>
                             </div>
                             <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm text-center">
@@ -227,7 +229,7 @@ export const ProfilePage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* ==================== ПРАВА КОЛОНКА (ВКЛАДКИ) ==================== */}
+                {/* ПРАВА КОЛОНКА (ВКЛАДКИ) */}
                 <div className="lg:col-span-2 space-y-6">
                     <div className="flex border-b border-gray-200 dark:border-gray-800 mb-6 overflow-x-auto no-scrollbar">
                         <button onClick={() => setActiveTab('posts')} className={`flex items-center gap-2 px-6 py-4 font-bold text-sm transition-all whitespace-nowrap ${activeTab === 'posts' ? `border-b-2 border-${accentColor}-600 text-${accentColor}-600` : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>
@@ -256,7 +258,7 @@ export const ProfilePage: React.FC = () => {
                                     userPosts.map(post => (
                                         <div key={post.id} className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 hover:border-gray-300 dark:hover:border-gray-700 transition-all cursor-pointer group relative shadow-sm">
 
-                                            {/* Кнопка видалення (Тільки якщо це твій профіль) */}
+                                            {/* Видалити пост можна тільки якщо ти на своєму профілі */}
                                             {isOwnProfile && (
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setPostToDeleteId(post.id); }}
@@ -317,10 +319,9 @@ export const ProfilePage: React.FC = () => {
                 </div>
             </div>
 
-            {/* МОДАЛКА ПЕРЕГЛЯДУ ФОТО */}
+            {/* Модалки */}
             {selectedImage && <ImageModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />}
 
-            {/* МОДАЛКА ВИДАЛЕННЯ ПОСТА */}
             {postToDeleteId !== null && (
                 <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn" onClick={() => setPostToDeleteId(null)}>
                     <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-zoomIn relative" onClick={(e) => e.stopPropagation()}>
@@ -340,7 +341,6 @@ export const ProfilePage: React.FC = () => {
                 </div>
             )}
 
-            {/* МОДАЛКА РЕДАГУВАННЯ (З підказкою перейти в налаштування) */}
             {isEditOpen && (
                 <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
                     <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md p-6">
