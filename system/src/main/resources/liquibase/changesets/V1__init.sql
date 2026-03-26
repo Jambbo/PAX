@@ -142,3 +142,28 @@ CREATE TABLE IF NOT EXISTS users_bookmarks
     CONSTRAINT fk_users_bookmarks_users FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
     CONSTRAINT fk_users_bookmarks_posts FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS comments
+(
+    id         BIGSERIAL PRIMARY KEY,
+    post_id    BIGINT       NOT NULL,
+    author_id  VARCHAR(36)  NOT NULL,
+    content    VARCHAR(1000) NOT NULL,
+    likes      BIGINT    DEFAULT 0,
+    dislikes   BIGINT    DEFAULT 0,
+    is_edited  BOOLEAN   DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_comments_posts FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE,
+    CONSTRAINT fk_comments_users FOREIGN KEY (author_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS comment_likes
+(
+    comment_id BIGINT      NOT NULL,
+    user_id    VARCHAR(36) NOT NULL,
+    is_like    BOOLEAN     NOT NULL, -- TRUE for like, FALSE for dislike
+    PRIMARY KEY (comment_id, user_id),
+    CONSTRAINT fk_comment_likes_comments FOREIGN KEY (comment_id) REFERENCES comments (id) ON DELETE CASCADE,
+    CONSTRAINT fk_comment_likes_users FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
