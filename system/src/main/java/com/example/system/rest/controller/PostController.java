@@ -110,6 +110,12 @@ public class PostController {
         return ResponseEntity.ok(dto);
     }
 
+    @PostMapping("/{id}/unlike")
+    public ResponseEntity<PostReadResponseDto> unlike(@PathVariable Long id) {
+        Post post = postService.decrementLikes(id);
+        PostReadResponseDto dto = postMapper.toDto(post);
+        return ResponseEntity.ok(dto);
+    }
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/bookmark")
     public ResponseEntity<Void> addBookmark(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {

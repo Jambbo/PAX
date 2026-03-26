@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, {useState, useEffect} from 'react';
+import {Link} from 'react-router-dom';
 import {
     TrendingUp,
     MessageSquare,
@@ -17,8 +17,8 @@ import {
 } from 'lucide-react';
 
 // ІМПОРТИ СЕРВІСІВ (Переконайся, що шляхи правильні)
-import { fetchAllPosts, createPost, deletePost, likePost, updatePost, unlikePost, Post } from '../postServise';
-import { fetchUsersCount, Group, fetchMyGroups } from '../../groups/groupsService';
+import {fetchAllPosts, createPost, deletePost, likePost, updatePost, unlikePost, Post} from '../postServise';
+import {fetchUsersCount, Group, fetchMyGroups} from '../../groups/groupsService';
 
 // ============================================================================
 // КОМПОНЕНТ МОДАЛЬНОГО ВІКНА ДЛЯ ПЕРЕГЛЯДУ ФОТОГРАФІЙ (LIGHTBOX)
@@ -28,7 +28,7 @@ interface ImageModalProps {
     onClose: () => void;
 }
 
-const ImageModal: React.FC<ImageModalProps> = ({ imageUrl, onClose }) => {
+const ImageModal: React.FC<ImageModalProps> = ({imageUrl, onClose}) => {
     // Закриття вікна по кнопці Escape
     useEffect(() => {
         const handleEsc = (e: KeyboardEvent) => {
@@ -47,7 +47,7 @@ const ImageModal: React.FC<ImageModalProps> = ({ imageUrl, onClose }) => {
                 onClick={onClose}
                 className="absolute top-6 right-6 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
             >
-                <X size={24} />
+                <X size={24}/>
             </button>
 
             <img
@@ -192,12 +192,19 @@ export const Home: React.FC = () => {
 
         setIsSubmitting(true);
         try {
-            const newPost = await createPost({
+            const createdPost = await createPost({
                 text: newPostText,
                 groupId: Number(selectedGroupId)
             });
 
-            // Додаємо новий пост в самий верх стрічки
+            // Find group name locally
+            const group = myGroups.find(g => g.id === Number(selectedGroupId));
+
+            const newPost = {
+                ...createdPost,
+                groupName: group?.name || "" // ensure it's always defined
+            };
+
             setPosts([newPost, ...posts]);
 
             // Очищаємо форму і згортаємо її
@@ -321,8 +328,9 @@ export const Home: React.FC = () => {
                             alt={`Post image ${index + 1}`}
                             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
-                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <Eye className="text-white" size={24} />
+                        <div
+                            className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Eye className="text-white" size={24}/>
                         </div>
                     </div>
                 ))}
@@ -347,10 +355,12 @@ export const Home: React.FC = () => {
 
             {/* --- КАРТКИ СТАТИСТИКИ --- */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className={`bg-${accentColor}-50 dark:bg-${accentColor}-900/10 border border-${accentColor}-200 dark:border-${accentColor}-500/20 rounded-xl p-6 transition-colors`}>
+                <div
+                    className={`bg-${accentColor}-50 dark:bg-${accentColor}-900/10 border border-${accentColor}-200 dark:border-${accentColor}-500/20 rounded-xl p-6 transition-colors`}>
                     <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 bg-${accentColor}-600 rounded-lg flex items-center justify-center shadow-lg shadow-${accentColor}-500/30`}>
-                            <MessageSquare size={24} className="text-white" />
+                        <div
+                            className={`w-12 h-12 bg-${accentColor}-600 rounded-lg flex items-center justify-center shadow-lg shadow-${accentColor}-500/30`}>
+                            <MessageSquare size={24} className="text-white"/>
                         </div>
                         <div>
                             <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Total Discussions</p>
@@ -359,10 +369,12 @@ export const Home: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-6 transition-colors">
+                <div
+                    className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/20 rounded-xl p-6 transition-colors">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/30">
-                            <Users size={24} className="text-white" />
+                        <div
+                            className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/30">
+                            <Users size={24} className="text-white"/>
                         </div>
                         <div>
                             <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Active Members</p>
@@ -373,10 +385,12 @@ export const Home: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-500/20 rounded-xl p-6 transition-colors">
+                <div
+                    className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-500/20 rounded-xl p-6 transition-colors">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center shadow-lg shadow-green-500/30">
-                            <TrendingUp size={24} className="text-white" />
+                        <div
+                            className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center shadow-lg shadow-green-500/30">
+                            <TrendingUp size={24} className="text-white"/>
                         </div>
                         <div>
                             <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Online Now</p>
@@ -388,26 +402,30 @@ export const Home: React.FC = () => {
 
             {/* --- БЛОК СТВОРЕННЯ ПОСТА (Тільки для авторизованих) --- */}
             {isLoggedIn && (
-                <div className={`bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800/50 rounded-xl mb-8 shadow-sm overflow-hidden transition-all duration-300 ease-in-out ${isCreating ? `ring-2 ring-${accentColor}-500/50` : ''}`}>
+                <div
+                    className={`bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800/50 rounded-xl mb-8 shadow-sm overflow-hidden transition-all duration-300 ease-in-out ${isCreating ? `ring-2 ring-${accentColor}-500/50` : ''}`}>
                     {!isCreating ? (
                         <div
                             onClick={() => setIsCreating(true)}
                             className="p-4 flex items-center gap-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                         >
-                            <div className={`w-10 h-10 rounded-full bg-${accentColor}-100 dark:bg-${accentColor}-900/30 flex items-center justify-center font-bold text-${accentColor}-600`}>
+                            <div
+                                className={`w-10 h-10 rounded-full bg-${accentColor}-100 dark:bg-${accentColor}-900/30 flex items-center justify-center font-bold text-${accentColor}-600`}>
                                 Me
                             </div>
-                            <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2.5 text-gray-500 dark:text-gray-400 text-sm">
+                            <div
+                                className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2.5 text-gray-500 dark:text-gray-400 text-sm">
                                 Create a new post...
                             </div>
                             <div className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                                <ImageIcon size={20} />
+                                <ImageIcon size={20}/>
                             </div>
                         </div>
                     ) : (
                         <div className="p-4 animate-fadeIn">
                             <div className="flex gap-4">
-                                <div className={`w-10 h-10 rounded-full bg-${accentColor}-100 dark:bg-${accentColor}-900/30 flex items-center justify-center font-bold text-${accentColor}-600 shrink-0`}>
+                                <div
+                                    className={`w-10 h-10 rounded-full bg-${accentColor}-100 dark:bg-${accentColor}-900/30 flex items-center justify-center font-bold text-${accentColor}-600 shrink-0`}>
                                     Me
                                 </div>
                                 <div className="flex-1">
@@ -421,7 +439,8 @@ export const Home: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                            <div
+                                className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <select
                                         value={selectedGroupId}
@@ -434,14 +453,19 @@ export const Home: React.FC = () => {
                                         ))}
                                     </select>
 
-                                    <button className={`p-2 text-gray-400 hover:text-${accentColor}-500 hover:bg-${accentColor}-50 dark:hover:bg-${accentColor}-900/20 rounded-lg transition-colors`} title="Attach Image">
-                                        <ImageIcon size={20} />
+                                    <button
+                                        className={`p-2 text-gray-400 hover:text-${accentColor}-500 hover:bg-${accentColor}-50 dark:hover:bg-${accentColor}-900/20 rounded-lg transition-colors`}
+                                        title="Attach Image">
+                                        <ImageIcon size={20}/>
                                     </button>
                                 </div>
 
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() => { setIsCreating(false); setNewPostText(""); }}
+                                        onClick={() => {
+                                            setIsCreating(false);
+                                            setNewPostText("");
+                                        }}
                                         className="px-4 py-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg font-medium transition-colors"
                                     >
                                         Cancel
@@ -451,7 +475,8 @@ export const Home: React.FC = () => {
                                         disabled={isSubmitting || !newPostText.trim() || !selectedGroupId}
                                         className={`px-5 py-2 bg-${accentColor}-600 hover:bg-${accentColor}-700 text-white rounded-lg font-medium flex items-center gap-2 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed`}
                                     >
-                                        {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                                        {isSubmitting ? <Loader2 size={18} className="animate-spin"/> :
+                                            <Send size={18}/>}
                                         Post
                                     </button>
                                 </div>
@@ -462,15 +487,17 @@ export const Home: React.FC = () => {
             )}
 
             {/* --- СТРІЧКА ПОСТІВ --- */}
-            <div className="bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800/50 rounded-xl p-6 shadow-sm transition-colors">
+            <div
+                className="bg-white dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800/50 rounded-xl p-6 shadow-sm transition-colors">
                 <div className="flex items-center gap-2 mb-6">
-                    <TrendingUp className={`text-${accentColor}-500`} size={24} />
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors">Recent Discussions</h2>
+                    <TrendingUp className={`text-${accentColor}-500`} size={24}/>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors">Recent
+                        Discussions</h2>
                 </div>
 
                 {isLoading && (
                     <div className="flex justify-center items-center py-10">
-                        <Loader2 className={`animate-spin text-${accentColor}-500`} size={32} />
+                        <Loader2 className={`animate-spin text-${accentColor}-500`} size={32}/>
                     </div>
                 )}
 
@@ -482,7 +509,7 @@ export const Home: React.FC = () => {
 
                 {!isLoading && !error && posts.length === 0 && (
                     <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                        <MessageSquare size={48} className="mx-auto mb-3 opacity-20" />
+                        <MessageSquare size={48} className="mx-auto mb-3 opacity-20"/>
                         <p>No discussions yet. Be the first to post!</p>
                     </div>
                 )}
@@ -505,12 +532,14 @@ export const Home: React.FC = () => {
                                 {/* ЗАГОЛОВОК / ТЕКСТ / ПОЛЕ РЕДАГУВАННЯ */}
                                 <div className="flex items-start justify-between mb-3">
                                     <div className="w-full">
-                                        <span className={`inline-block text-xs font-medium bg-${accentColor}-100 dark:bg-${accentColor}-600/20 text-${accentColor}-700 dark:text-${accentColor}-300 px-2.5 py-1 rounded-full mb-2 transition-colors`}>
-                                            {post.groupName || `Group ID: ${post.groupId}`}
+                                        <span
+                                            className={`inline-block text-xs font-medium bg-${accentColor}-100 dark:bg-${accentColor}-600/20 text-${accentColor}-700 dark:text-${accentColor}-300 px-2.5 py-1 rounded-full mb-2 transition-colors`}>
+                                            {post.groupName }
                                         </span>
 
                                         {isEditing ? (
-                                            <div onClick={e => e.stopPropagation()} className="mt-2 w-full animate-fadeIn">
+                                            <div onClick={e => e.stopPropagation()}
+                                                 className="mt-2 w-full animate-fadeIn">
                                                 <textarea
                                                     value={editPostText}
                                                     onChange={(e) => setEditPostText(e.target.value)}
@@ -544,26 +573,33 @@ export const Home: React.FC = () => {
                                 {renderPostImages(post.images)}
 
                                 {/* НИЖНЯ ПАНЕЛЬ: АВТОР, ЛАЙКИ, ПЕРЕГЛЯДИ */}
-                                <div className="flex items-center justify-between gap-4 text-sm text-gray-500 dark:text-gray-400 pt-4 border-t border-gray-100 dark:border-gray-700/50">
+                                <div
+                                    className="flex items-center justify-between gap-4 text-sm text-gray-500 dark:text-gray-400 pt-4 border-t border-gray-100 dark:border-gray-700/50">
                                     <div className="flex items-center gap-2">
-                                        <Link to={`/profile/${post.authorId}`} onClick={(e) => e.stopPropagation()} className="shrink-0">
-                                            <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-500 uppercase text-xs border border-gray-300 dark:border-gray-600 hover:scale-105 transition-transform">
+                                        <Link to={`/profile/${post.authorId}`} onClick={(e) => e.stopPropagation()}
+                                              className="shrink-0">
+                                            <div
+                                                className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-500 uppercase text-xs border border-gray-300 dark:border-gray-600 hover:scale-105 transition-transform">
                                                 {post.authorUsername ? post.authorUsername[0] : '?'}
                                             </div>
                                         </Link>
-                                        <span>by <Link to={`/profile/${post.authorId}`} onClick={(e) => e.stopPropagation()} className={`font-medium text-gray-700 dark:text-gray-200 hover:text-${accentColor}-600 transition-colors`}>
+                                        <span>by <Link to={`/profile/${post.authorId}`}
+                                                       onClick={(e) => e.stopPropagation()}
+                                                       className={`font-medium text-gray-700 dark:text-gray-200 hover:text-${accentColor}-600 transition-colors`}>
                                             {post.authorUsername || `User ID: ${post.authorId}`}
                                         </Link></span>
                                     </div>
 
                                     <div className="flex items-center gap-6">
-                                        <div className={`flex items-center gap-1.5 transition-colors ${isLiked ? 'text-red-500' : 'hover:text-red-500'}`} title="Likes">
-                                            <Heart size={16} className={isLiked ? "fill-current" : ""} />
+                                        <div
+                                            className={`flex items-center gap-1.5 transition-colors ${isLiked ? 'text-red-500' : 'hover:text-red-500'}`}
+                                            title="Likes">
+                                            <Heart size={16} className={isLiked ? "fill-current" : ""}/>
                                             <span className="font-medium">{post.likes || 0}</span>
                                         </div>
 
                                         <div className="flex items-center gap-1.5" title="Views">
-                                            <Eye size={16} />
+                                            <Eye size={16}/>
                                             <span className="font-medium">{post.views || 0}</span>
                                         </div>
                                     </div>
@@ -574,7 +610,9 @@ export const Home: React.FC = () => {
                                     Видно тільки коли пост розгорнуто і не редагується
                                     ========================================================= */}
                                 {isExpanded && !isEditing && (
-                                    <div className="pt-4 mt-4 border-t border-gray-100 dark:border-gray-700/50 animate-fadeIn" onClick={e => e.stopPropagation()}>
+                                    <div
+                                        className="pt-4 mt-4 border-t border-gray-100 dark:border-gray-700/50 animate-fadeIn"
+                                        onClick={e => e.stopPropagation()}>
                                         <div className="flex flex-wrap items-center justify-between gap-4">
 
                                             {/* ЛІВА ЧАСТИНА: Лайк, Комент, Зберегти */}
@@ -587,15 +625,16 @@ export const Home: React.FC = () => {
                                                             : 'bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-500 dark:bg-gray-800/50 dark:hover:bg-red-900/20 dark:text-gray-300 dark:hover:text-red-400'
                                                     }`}
                                                 >
-                                                    <Heart size={18} className={isLiked ? "fill-current" : ""} />
-                                                    <span className="text-sm font-medium">{isLiked ? 'Liked' : 'Like'}</span>
+                                                    <Heart size={18} className={isLiked ? "fill-current" : ""}/>
+                                                    <span
+                                                        className="text-sm font-medium">{isLiked ? 'Liked' : 'Like'}</span>
                                                 </button>
 
                                                 <button
                                                     onClick={() => alert("Коментарі скоро будуть доступні!")}
                                                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-blue-50 text-gray-600 hover:text-blue-500 dark:bg-gray-800/50 dark:hover:bg-blue-900/20 dark:text-gray-300 dark:hover:text-blue-400 transition-colors"
                                                 >
-                                                    <MessageSquare size={18} />
+                                                    <MessageSquare size={18}/>
                                                     <span className="text-sm font-medium">Comment</span>
                                                 </button>
 
@@ -603,7 +642,7 @@ export const Home: React.FC = () => {
                                                     onClick={() => alert("Пост додано у збережені (заглушка)!")}
                                                     className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-green-50 text-gray-600 hover:text-green-500 dark:bg-gray-800/50 dark:hover:bg-green-900/20 dark:text-gray-300 dark:hover:text-green-400 transition-colors"
                                                 >
-                                                    <Bookmark size={18} />
+                                                    <Bookmark size={18}/>
                                                     <span className="text-sm font-medium hidden sm:block">Save</span>
                                                 </button>
                                             </div>
@@ -616,14 +655,17 @@ export const Home: React.FC = () => {
                                                         className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 dark:bg-gray-800/50 dark:hover:bg-gray-700 dark:text-gray-300 transition-colors"
                                                         title="Edit Post"
                                                     >
-                                                        <Edit3 size={18} />
+                                                        <Edit3 size={18}/>
                                                     </button>
                                                     <button
-                                                        onClick={(e) => { e.stopPropagation(); setPostToDeleteId(post.id); }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setPostToDeleteId(post.id);
+                                                        }}
                                                         className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/10 dark:hover:bg-red-900/30 dark:text-red-400 transition-colors"
                                                         title="Delete Post"
                                                     >
-                                                        <Trash2 size={18} />
+                                                        <Trash2 size={18}/>
                                                     </button>
                                                 </div>
                                             )}
@@ -658,12 +700,13 @@ export const Home: React.FC = () => {
                             onClick={() => setPostToDeleteId(null)}
                             className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
                         >
-                            <X size={24} />
+                            <X size={24}/>
                         </button>
 
                         <div className="flex flex-col items-center text-center mt-4">
-                            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mb-4">
-                                <AlertTriangle size={32} />
+                            <div
+                                className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mb-4">
+                                <AlertTriangle size={32}/>
                             </div>
 
                             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -686,7 +729,7 @@ export const Home: React.FC = () => {
                                     disabled={isDeletingPost}
                                     className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium transition-colors shadow-lg shadow-red-500/30 flex justify-center items-center gap-2 disabled:opacity-50"
                                 >
-                                    {isDeletingPost ? <Loader2 size={18} className="animate-spin" /> : "Delete"}
+                                    {isDeletingPost ? <Loader2 size={18} className="animate-spin"/> : "Delete"}
                                 </button>
                             </div>
                         </div>
