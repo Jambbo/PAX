@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Client } from "@stomp/stompjs";
-import { Send } from "lucide-react";
+import { Send, Search, MoreVertical, Phone, Video, Paperclip, Smile, MessageSquare } from "lucide-react";
 
 interface User {
     id: string;
@@ -16,187 +16,332 @@ interface ChatMessage {
 }
 
 export const MessagesPage: React.FC = () => {
-    
-const [users, setUsers] = useState<User[]>([]);
-const [selectedUser, setSelectedUser] = useState<User | null>(null);
-const [messages, setMessages] = useState<ChatMessage[]>([]);
-const [input, setInput] = useState("");
-const [client, setClient] = useState<Client | null>(null);
-const [currentUserId, setCurrentUserId] = useState<string>("");
+    // =========================================================================
+    // UI СТЕЙТИ ТА ЛОГІКА ДИЗАЙНУ
+    // =========================================================================
+    const [accentColor, setAccentColor] = useState(() => localStorage.getItem('site_accent_color') || 'purple');
+    const [searchQuery, setSearchQuery] = useState("");
+    const messagesEndRef = useRef<HTMLDivElement>(null);
 
-// userId -> conversationId
-const [conversationMap, setConversationMap] =
-    useState<Record<string, string>>({});
+    useEffect(() => {
+        const handleStorageChange = () => setAccentColor(localStorage.getItem('site_accent_color') || 'purple');
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('accent-color-change', handleStorageChange);
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('accent-color-change', handleStorageChange);
+        };
+    }, []);
 
-const getUserIdFromToken = () => {
-    const token = localStorage.getItem("access_token")!;
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.sub;
-};
-
-// websocket connect
-useEffect(() => {
-
-    const token = localStorage.getItem("access_token")!;
-    const userId = getUserIdFromToken();
-    setCurrentUserId(userId);
-
-    const stompClient = new Client({
-        brokerURL: "ws://localhost:8081/ws",
-        connectHeaders: {
-            Authorization: `Bearer ${token}`
-        },
-        reconnectDelay: 5000
-    });
-
-    stompClient.onConnect = () => {
-        stompClient.subscribe("/user/queue/messages", (msg) => {
-            const body: ChatMessage = JSON.parse(msg.body);
-
-            setMessages(prev => {
-                const exists = prev.find(m => m.id === body.id);
-                if (exists) return prev;
-                return [...prev, body];
-            });
-
-            // detect other participant
-            const otherUserId =
-                body.senderId === userId
-                    ? getRecipientFromConversation(body, userId)
-                    : body.senderId;
-
-            if (otherUserId) {
-                setConversationMap(prev => ({
-                    ...prev,
-                    [otherUserId]: body.conversationId
-                }));
-            }
-        });
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
-    stompClient.activate();
-    setClient(stompClient);
+    // =========================================================================
+    // ОРИГІНАЛЬНА ЛОГІКА (БЕЗ ЗМІН)
+    // =========================================================================
+    const [users, setUsers] = useState<User[]>([]);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [input, setInput] = useState("");
+    const [client, setClient] = useState<Client | null>(null);
+    const [currentUserId, setCurrentUserId] = useState<string>("");
 
-    return () => stompClient.deactivate();
+    // userId -> conversationId
+    const [conversationMap, setConversationMap] = useState<Record<string, string>>({});
 
-}, []);
+    const getUserIdFromToken = () => {
+        const token = localStorage.getItem("access_token")!;
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        return payload.sub;
+    };
 
-// helper to detect other user
-const getRecipientFromConversation = (
-    message: ChatMessage,
-    me: string
-) => {
-    const match = messages.find(
-        m =>
-            m.conversationId === message.conversationId &&
-            m.senderId !== me
-    );
-    return match?.senderId;
-};
+    // websocket connect
+    useEffect(() => {
+        const token = localStorage.getItem("access_token")!;
+        const userId = getUserIdFromToken();
+        setCurrentUserId(userId);
 
-// load users
-useEffect(() => {
-    fetch("http://localhost:8081/api/v1/users/latest", {
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem("access_token")}`
-        }
-    })
-        .then(res => res.json())
-        .then(data => {
-            if (Array.isArray(data)) setUsers(data);
+        const stompClient = new Client({
+            brokerURL: "ws://localhost:8081/ws",
+            connectHeaders: {
+                Authorization: `Bearer ${token}`
+            },
+            reconnectDelay: 5000
         });
-}, []);
 
-const sendMessage = () => {
-    if (!input.trim() || !selectedUser || !client) return;
+        stompClient.onConnect = () => {
+            stompClient.subscribe("/user/queue/messages", (msg) => {
+                const body: ChatMessage = JSON.parse(msg.body);
 
-    client.publish({
-        destination: "/app/chat.send",
-        body: JSON.stringify({
-            recipientId: selectedUser.id,
-            content: input
+                setMessages(prev => {
+                    const exists = prev.find(m => m.id === body.id);
+                    if (exists) return prev;
+                    return [...prev, body];
+                });
+
+                // detect other participant
+                const otherUserId =
+                    body.senderId === userId
+                        ? getRecipientFromConversation(body, userId)
+                        : body.senderId;
+
+                if (otherUserId) {
+                    setConversationMap(prev => ({
+                        ...prev,
+                        [otherUserId]: body.conversationId
+                    }));
+                }
+            });
+        };
+
+        stompClient.activate();
+        setClient(stompClient);
+
+        return () => stompClient.deactivate();
+    }, []);
+
+    // helper to detect other user
+    const getRecipientFromConversation = (
+        message: ChatMessage,
+        me: string
+    ) => {
+        const match = messages.find(
+            m =>
+                m.conversationId === message.conversationId &&
+                m.senderId !== me
+        );
+        return match?.senderId;
+    };
+
+    // load users
+    useEffect(() => {
+        fetch("http://localhost:8081/api/v1/users/latest", {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem("access_token")}`
+            }
         })
-    });
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) setUsers(data);
+            });
+    }, []);
 
-    setInput("");
-};
+    const sendMessage = () => {
+        if (!input.trim() || !selectedUser || !client) return;
 
-const activeConversationId =
-    selectedUser ? conversationMap[selectedUser.id] : null;
+        client.publish({
+            destination: "/app/chat.send",
+            body: JSON.stringify({
+                recipientId: selectedUser.id,
+                content: input
+            })
+        });
 
-const filteredMessages = messages.filter(
-    m => m.conversationId === activeConversationId
-);
+        setInput("");
+    };
 
-return (
-    <div className="h-[calc(100vh-7rem)] flex max-w-6xl mx-auto border rounded-xl overflow-hidden">
+    const activeConversationId = selectedUser ? conversationMap[selectedUser.id] : null;
 
-        {/* USERS */}
-        <div className="w-72 border-r bg-gray-900 text-white">
-            <div className="p-4 font-semibold">Users</div>
+    const filteredMessages = messages.filter(
+        m => m.conversationId === activeConversationId
+    );
 
-            {users.map(user => (
-                <div
-                    key={user.id}
-                    onClick={() => setSelectedUser(user)}
-                    className={`p-4 cursor-pointer hover:bg-gray-800 ${
-        selectedUser?.id === user.id ? "bg-gray-800" : ""
-    }`}
-                >
-                    {user.username}
+    // Скрол донизу при зміні вибраного юзера або масиву повідомлень
+    useEffect(() => {
+        scrollToBottom();
+    }, [filteredMessages, selectedUser]);
+
+    // Локальний пошук для UI
+    const displayedUsers = users.filter(u =>
+        u.username.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    // =========================================================================
+    // НОВИЙ ІНТЕРФЕЙС
+    // =========================================================================
+    return (
+        <div className="max-w-6xl mx-auto h-[calc(100vh-8rem)] min-h-[600px] flex bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden animate-fadeIn">
+
+            {/* ================= ЛІВА ПАНЕЛЬ (СПИСОК КОНТАКТІВ) ================= */}
+            <div className="w-full md:w-80 lg:w-96 flex flex-col border-r border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+                {/* Хедер лівої панелі */}
+                <div className="h-16 px-4 flex items-center border-b border-gray-200 dark:border-gray-800 shrink-0">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white flex-1">Messages</h2>
                 </div>
-            ))}
-        </div>
 
-        {/* CHAT */}
-        <div className="flex-1 flex flex-col bg-gray-800 text-white">
+                {/* Пошук */}
+                <div className="p-3">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Search users..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className={`w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-${accentColor}-500 transition-shadow shadow-sm`}
+                        />
+                    </div>
+                </div>
 
-            <div className="p-4 border-b">
-                {selectedUser ? selectedUser.username : "Select user"}
+                {/* Список користувачів */}
+                <div className="flex-1 overflow-y-auto no-scrollbar p-2 space-y-1">
+                    {displayedUsers.length === 0 ? (
+                        <div className="text-center text-gray-500 py-6 text-sm">No users found.</div>
+                    ) : (
+                        displayedUsers.map((user) => {
+                            const isSelected = selectedUser?.id === user.id;
+                            const avatarLetter = user.username ? user.username.charAt(0).toUpperCase() : '?';
+
+                            return (
+                                <div
+                                    key={user.id}
+                                    onClick={() => setSelectedUser(user)}
+                                    className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${
+                                        isSelected
+                                            ? `bg-${accentColor}-50 dark:bg-${accentColor}-900/20`
+                                            : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                                    }`}
+                                >
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0 ${
+                                        isSelected
+                                            ? `bg-${accentColor}-600 text-white`
+                                            : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                                    }`}>
+                                        {avatarLetter}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-baseline mb-0.5">
+                                            <h3 className={`font-semibold truncate ${isSelected ? `text-${accentColor}-700 dark:text-${accentColor}-400` : "text-gray-900 dark:text-white"}`}>
+                                                {user.username}
+                                            </h3>
+                                        </div>
+                                        <p className="text-sm text-gray-500 truncate">
+                                            Click to open chat
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                {filteredMessages.map((msg, i) => {
+            {/* ================= ПРАВА ПАНЕЛЬ (ЧАТ) ================= */}
+            <div className="flex-1 flex flex-col bg-white dark:bg-gray-900 relative">
+                {!selectedUser ? (
+                    // Порожній стан
+                    <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-600 bg-gray-50/30 dark:bg-gray-900/30">
+                        <div className={`w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4`}>
+                            <MessageSquare size={32} />
+                        </div>
+                        <p className="text-lg font-medium text-gray-600 dark:text-gray-400">Select a user to start messaging</p>
+                    </div>
+                ) : (
+                    // Активний чат
+                    <>
+                        {/* Хедер чату */}
+                        <div className="h-16 px-6 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md z-10 shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-full bg-${accentColor}-100 dark:bg-${accentColor}-900/30 text-${accentColor}-600 flex items-center justify-center font-bold text-lg`}>
+                                    {selectedUser.username ? selectedUser.username.charAt(0).toUpperCase() : '?'}
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-900 dark:text-white leading-tight">
+                                        {selectedUser.username}
+                                    </h3>
+                                    <span className={`text-xs font-medium text-${accentColor}-500`}>Online</span>
+                                </div>
+                            </div>
 
-                    const isMine = msg.senderId === currentUserId;
-
-                    return (
-                        <div
-                            key={i}
-                            className={`flex ${isMine ? "justify-end" : "justify-start"}`}
-                        >
-                            <div
-                                className={`px-4 py-2 rounded-lg max-w-xs ${
-        isMine ? "bg-purple-600" : "bg-gray-700"
-    }`}
-                            >
-                                {msg.content}
+                            <div className="flex items-center gap-4 text-gray-400">
+                                <button className="hover:text-gray-600 dark:hover:text-gray-200 transition-colors hidden sm:block"><Phone size={20} /></button>
+                                <button className="hover:text-gray-600 dark:hover:text-gray-200 transition-colors hidden sm:block"><Video size={20} /></button>
+                                <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 hidden sm:block"></div>
+                                <button className="hover:text-gray-600 dark:hover:text-gray-200 transition-colors"><Search size={20} /></button>
+                                <button className="hover:text-gray-600 dark:hover:text-gray-200 transition-colors"><MoreVertical size={20} /></button>
                             </div>
                         </div>
-                    );
-                })}
-            </div>
 
-            <div className="p-4 border-t flex gap-2">
-                <input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    className="flex-1 bg-gray-700 px-3 py-2 rounded"
-                    placeholder="Type message..."
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter") sendMessage();
-                    }}
-                />
+                        {/* Зона повідомлень */}
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-gray-50 dark:bg-gray-900/50">
+                            {filteredMessages.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-gray-400">
+                                    <p className="bg-gray-200/50 dark:bg-gray-800/50 px-4 py-1.5 rounded-full text-sm font-medium">Say hello to {selectedUser.username} 👋</p>
+                                </div>
+                            ) : (
+                                filteredMessages.map((msg, i) => {
+                                    const isMine = msg.senderId === currentUserId;
 
-                <button
-                    onClick={sendMessage}
-                    className="bg-purple-600 px-4 rounded flex items-center"
-                >
-                    <Send size={18}/>
-                </button>
+                                    return (
+                                        <div key={i} className={`flex ${isMine ? "justify-end" : "justify-start"} animate-fadeIn`}>
+                                            <div
+                                                className={`px-4 py-2.5 max-w-[75%] lg:max-w-[60%] text-[15px] shadow-sm flex flex-col gap-1 ${
+                                                    isMine
+                                                        ? `bg-${accentColor}-600 text-white rounded-2xl rounded-tr-sm` // Стиль відправника
+                                                        : "bg-white border border-gray-100 dark:border-gray-800 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-tl-sm" // Стиль отримувача
+                                                }`}
+                                            >
+                                                <span className="leading-relaxed whitespace-pre-wrap word-break-words break-words">{msg.content}</span>
+                                                <span className={`text-[10px] self-end mt-0.5 opacity-70 ${isMine ? 'text-white/80' : 'text-gray-500'}`}>
+                                                    {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        {/* Поле вводу */}
+                        <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shrink-0">
+                            <div className="flex items-end gap-2 max-w-4xl mx-auto relative">
+                                <button className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shrink-0">
+                                    <Paperclip size={22} />
+                                </button>
+
+                                <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-2xl flex items-end border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-700 transition-colors relative min-h-[48px]">
+                                    <textarea
+                                        value={input}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        placeholder="Type message..."
+                                        className="w-full bg-transparent px-4 py-3 text-[15px] text-gray-900 dark:text-white outline-none resize-none max-h-32 min-h-[48px] placeholder-gray-500"
+                                        rows={1}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter" && !e.shiftKey) {
+                                                e.preventDefault();
+                                                sendMessage();
+                                            }
+                                        }}
+                                        onInput={(e) => {
+                                            const target = e.target as HTMLTextAreaElement;
+                                            target.style.height = 'auto';
+                                            target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
+                                        }}
+                                    />
+                                    <button className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shrink-0 absolute right-0 bottom-0">
+                                        <Smile size={22} />
+                                    </button>
+                                </div>
+
+                                {input.trim().length > 0 ? (
+                                    <button
+                                        onClick={sendMessage}
+                                        className={`p-3 bg-${accentColor}-600 hover:bg-${accentColor}-700 text-white rounded-full transition-all shadow-md shrink-0 animate-zoomIn`}
+                                    >
+                                        <Send size={20} className="translate-x-0.5 -translate-y-0.5" />
+                                    </button>
+                                ) : (
+                                    <button className="p-3 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-full cursor-not-allowed shrink-0">
+                                        <Send size={20} className="translate-x-0.5 -translate-y-0.5" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
-    </div>
-);
-
+    );
 };

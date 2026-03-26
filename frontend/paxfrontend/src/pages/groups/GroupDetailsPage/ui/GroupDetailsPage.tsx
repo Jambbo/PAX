@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, MessageSquare, Shield, Lock, Check, UserPlus, Loader2, Eye, Heart, Globe, X, Image as ImageIcon, Send, Trash2, AlertTriangle, Settings, Edit3 } from 'lucide-react';
+import { ArrowLeft, Users, MessageSquare, Shield, Lock, Check, UserPlus, Loader2, Eye, Heart, Globe, X, Image as ImageIcon, Send, Trash2, AlertTriangle, Settings, Edit3, Bookmark } from 'lucide-react';
 import { fetchGroupById, joinGroup, leaveGroup, fetchMyGroups, deleteGroup, updateGroup, Group } from '../../groupsService';
-import { fetchGroupPosts, createPost, deletePost, Post } from '../../../main/postServise';
+import { fetchGroupPosts, createPost, deletePost, updatePost, likePost, unlikePost, Post } from '../../../main/postServise';
 import { AuthModal } from '../../../../widgets/AuthModal/AuthModal';
 
 // --- Компонент Модального вікна для перегляду фото (LightBox) ---
@@ -75,6 +75,21 @@ export const GroupDetailsPage: React.FC = () => {
     const [newPostText, setNewPostText] = useState("");
     const [isSubmittingPost, setIsSubmittingPost] = useState(false);
 
+    // --- НОВІ СТЕЙТИ ДЛЯ РОЗШИРЕННЯ, РЕДАГУВАННЯ ТА ЛАЙКІВ ПОСТА ---
+    const [expandedPostId, setExpandedPostId] = useState<number | null>(null);
+    const [editingPostId, setEditingPostId] = useState<number | null>(null);
+    const [editPostText, setEditPostText] = useState("");
+    const [isUpdatingPost, setIsUpdatingPost] = useState(false);
+
+    const [likedPosts, setLikedPosts] = useState<Set<number>>(() => {
+        const saved = localStorage.getItem('pax_liked_posts');
+        return saved ? new Set(JSON.parse(saved)) : new Set();
+    });
+
+    useEffect(() => {
+        localStorage.setItem('pax_liked_posts', JSON.stringify(Array.from(likedPosts)));
+    }, [likedPosts]);
+
     // Модалка авторизації
     const [authModal, setAuthModal] = useState({ isOpen: false, title: "", message: "" });
     const requireAuth = (title: string, message: string) => {
@@ -118,7 +133,6 @@ export const GroupDetailsPage: React.FC = () => {
                 const isUserJoined = myGroupsData.some((myGroup: Group) => myGroup.id === groupId);
                 setGroup({ ...groupData, isJoined: isUserJoined });
 
-                // Заповнюємо форму редагування поточними даними (БЕЗПЕЧНИЙ ВАРІАНТ)
                 setEditFormData({
                     name: groupData.name || "",
                     description: groupData.description || "",
@@ -154,7 +168,57 @@ export const GroupDetailsPage: React.FC = () => {
         }
     };
 
-    // ===== ПІДТВЕРДЖЕННЯ ВИДАЛЕННЯ ПОСТА =====
+    // ===== ЛОГІКА ПОСТІВ (ЛАЙКИ, РЕДАГУВАННЯ, ВИДАЛЕННЯ) =====
+    const handleLike = async (postId: number, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!requireAuth("Like Post", "You need to log in to like posts.")) return;
+
+        const isLiked = likedPosts.has(postId);
+        try {
+            let updatedPost;
+            if (isLiked) {
+                updatedPost = await unlikePost(postId);
+                setLikedPosts(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(postId);
+                    return newSet;
+                });
+            } else {
+                updatedPost = await likePost(postId);
+                setLikedPosts(prev => new Set(prev).add(postId));
+            }
+            setPosts(posts.map(p => p.id === postId ? updatedPost : p));
+        } catch (err) {
+            console.error("Помилка роботи з лайком", err);
+        }
+    };
+
+    const handleStartEdit = (post: Post, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setEditingPostId(post.id);
+        setEditPostText(post.text);
+    };
+
+    const handleSaveEdit = async (post: Post, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!editPostText.trim()) return;
+        setIsUpdatingPost(true);
+        try {
+            const updatedPost = await updatePost(post.id, {
+                id: post.id,
+                text: editPostText,
+                groupId: post.groupId || groupId
+            });
+            setPosts(posts.map(p => p.id === post.id ? updatedPost : p));
+            setEditingPostId(null);
+        } catch (err) {
+            console.error(err);
+            alert("Помилка збереження! Відкрий консоль (F12), щоб побачити точну причину від бекенду.");
+        } finally {
+            setIsUpdatingPost(false);
+        }
+    };
+
     const confirmDeletePost = async () => {
         if (postToDeleteId === null) return;
         setIsDeletingPost(true);
@@ -162,6 +226,7 @@ export const GroupDetailsPage: React.FC = () => {
             await deletePost(postToDeleteId);
             setPosts(posts.filter(p => p.id !== postToDeleteId));
             setPostToDeleteId(null);
+            if (expandedPostId === postToDeleteId) setExpandedPostId(null);
         } catch (err) {
             alert("Помилка! Можливо, бекенд не дозволяє власнику групи видаляти чужі пости. Скажи другу виправити PostController.");
         } finally {
@@ -400,6 +465,7 @@ export const GroupDetailsPage: React.FC = () => {
                         </div>
                     )}
 
+                    {/* СПИСОК ПОСТІВ З АКОРДЕОНОМ */}
                     <div className="space-y-6">
                         {posts.length === 0 ? (
                             <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/20 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
@@ -408,41 +474,98 @@ export const GroupDetailsPage: React.FC = () => {
                                 <p className="text-gray-500">Be the first to start a discussion in {group.name}!</p>
                             </div>
                         ) : (
-                            posts.map(post => (
-                                <div key={post.id} className="bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-2xl p-5 hover:border-gray-300 transition-all shadow-sm group relative">
+                            posts.map(post => {
+                                const isExpanded = expandedPostId === post.id;
+                                const isEditing = editingPostId === post.id;
+                                const isLiked = likedPosts.has(post.id);
 
-                                    {/* КНОПКА ВИДАЛЕННЯ ПОСТА */}
-                                    {(isOwner || post.authorId === currentUserId) && (
-                                        <button
-                                            onClick={() => setPostToDeleteId(post.id)} // ТУТ ЗМІНЕНО: тепер відкриваємо модалку замість alert
-                                            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                            title="Delete Post"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    )}
-
-                                    <div className="flex items-start justify-between mb-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-500 uppercase text-xs">
-                                                {post.authorUsername ? post.authorUsername[0] : '?'}
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-gray-900 dark:text-white text-sm">{post.authorUsername || `User ID: ${post.authorId}`}</p>
-                                                <p className="text-xs text-gray-500">{new Date(post.createdAt).toLocaleDateString()}</p>
+                                return (
+                                    <div
+                                        key={post.id}
+                                        className={`bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-2xl p-5 hover:border-gray-300 transition-all shadow-sm group relative cursor-pointer ${
+                                            isExpanded ? `ring-1 ring-${accentColor}-500/50 bg-gray-50 dark:bg-gray-800/50` : ''
+                                        }`}
+                                        onClick={() => !isEditing && setExpandedPostId(isExpanded ? null : post.id)}
+                                    >
+                                        <div className="flex items-start justify-between mb-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-500 uppercase text-xs">
+                                                    {post.authorUsername ? post.authorUsername[0] : '?'}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-gray-900 dark:text-white text-sm">{post.authorUsername || `User ID: ${post.authorId}`}</p>
+                                                    <p className="text-xs text-gray-500">{new Date(post.createdAt).toLocaleDateString()}</p>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {renderPostImages(post.images)}
+                                        {renderPostImages(post.images)}
 
-                                    <p className="text-gray-800 dark:text-gray-200 mb-4 whitespace-pre-wrap leading-relaxed">{post.text}</p>
-                                    <div className="flex items-center gap-6 pt-4 border-t border-gray-100 dark:border-gray-700 text-gray-500">
-                                        <button className="flex items-center gap-2 hover:text-red-500 transition-colors"><Heart size={16} /> {post.likes || 0}</button>
-                                        <span className="flex items-center gap-2"><Eye size={16} /> {post.views || 0}</span>
+                                        <div className="w-full mb-4">
+                                            {isEditing ? (
+                                                <div onClick={e => e.stopPropagation()} className="mt-2 w-full animate-fadeIn">
+                                                    <textarea
+                                                        value={editPostText}
+                                                        onChange={(e) => setEditPostText(e.target.value)}
+                                                        className={`w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl p-3 text-gray-900 dark:text-white focus:ring-2 focus:ring-${accentColor}-500 outline-none resize-none min-h-[100px]`}
+                                                    />
+                                                    <div className="flex justify-end gap-2 mt-3">
+                                                        <button onClick={() => setEditingPostId(null)} className="px-4 py-2 text-sm text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancel</button>
+                                                        <button onClick={(e) => handleSaveEdit(post, e)} disabled={isUpdatingPost} className={`px-4 py-2 text-sm bg-${accentColor}-600 text-white rounded-lg hover:bg-${accentColor}-700 transition-colors disabled:opacity-50`}>
+                                                            {isUpdatingPost ? "Saving..." : "Save"}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <p className={`text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed ${isExpanded ? '' : 'line-clamp-3'}`}>
+                                                    {post.text}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center gap-6 pt-4 border-t border-gray-100 dark:border-gray-700 text-gray-500">
+                                            <button onClick={(e) => handleLike(post.id, e)} className={`flex items-center gap-2 hover:text-red-500 transition-colors ${isLiked ? 'text-red-500' : ''}`}>
+                                                <Heart size={16} className={isLiked ? "fill-current" : ""} /> {post.likes || 0}
+                                            </button>
+                                            <span className="flex items-center gap-2"><Eye size={16} /> {post.views || 0}</span>
+                                        </div>
+
+                                        {/* === ДОДАТКОВА ПАНЕЛЬ ДІЙ (АКОРДЕОН) === */}
+                                        {isExpanded && !isEditing && (
+                                            <div className="pt-4 mt-4 border-t border-gray-100 dark:border-gray-700/50 animate-fadeIn" onClick={e => e.stopPropagation()}>
+                                                <div className="flex flex-wrap items-center justify-between gap-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <button onClick={(e) => handleLike(post.id, e)} className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${isLiked ? 'bg-red-50 text-red-500 dark:bg-red-900/20 dark:text-red-400' : 'bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-500 dark:bg-gray-800/50 dark:hover:bg-red-900/20 dark:text-gray-300 dark:hover:text-red-400'}`}>
+                                                            <Heart size={18} className={isLiked ? "fill-current" : ""} />
+                                                            <span className="text-sm font-medium">{isLiked ? 'Liked' : 'Like'}</span>
+                                                        </button>
+
+                                                        <button onClick={() => alert("Коментарі скоро будуть доступні!")} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-blue-50 text-gray-600 hover:text-blue-500 dark:bg-gray-800/50 dark:hover:bg-blue-900/20 dark:text-gray-300 dark:hover:text-blue-400 transition-colors">
+                                                            <MessageSquare size={18} /> <span className="text-sm font-medium">Comment</span>
+                                                        </button>
+
+                                                        <button onClick={() => alert("Пост додано у збережені (заглушка)!")} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-green-50 text-gray-600 hover:text-green-500 dark:bg-gray-800/50 dark:hover:bg-green-900/20 dark:text-gray-300 dark:hover:text-green-400 transition-colors">
+                                                            <Bookmark size={18} /> <span className="text-sm font-medium hidden sm:block">Save</span>
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Кнопки редагування/видалення тільки для автора або власника групи */}
+                                                    {(isOwner || post.authorId === currentUserId) && (
+                                                        <div className="flex items-center gap-2">
+                                                            <button onClick={(e) => handleStartEdit(post, e)} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 dark:bg-gray-800/50 dark:hover:bg-gray-700 dark:text-gray-300 transition-colors" title="Edit Post">
+                                                                <Edit3 size={18} />
+                                                            </button>
+                                                            <button onClick={(e) => { e.stopPropagation(); setPostToDeleteId(post.id); }} className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/10 dark:hover:bg-red-900/30 dark:text-red-400 transition-colors" title="Delete Post">
+                                                                <Trash2 size={18} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 </div>

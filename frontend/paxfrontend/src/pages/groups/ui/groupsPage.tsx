@@ -63,7 +63,7 @@ export const GroupsPage: React.FC = () => {
     };
     // ====================================
 
-    const [activeTab, setActiveTab] = useState<'discover' | 'joined' | 'popular'>('discover');
+    const [activeTab, setActiveTab] = useState<'discover' | 'joined' | 'myGroups'>('discover');
     const [searchQuery, setSearchQuery] = useState('');
     const [communities, setCommunities] = useState<Community[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -81,26 +81,32 @@ export const GroupsPage: React.FC = () => {
             try {
                 const token = localStorage.getItem("access_token");
 
-                // Always load all groups
+                // 1. Total Communities
                 const all = await fetchAllGroups();
-
                 setAllGroupsCount(all.length);
 
-                // Only load joined groups if user logged in
-                if (token) {
+                // 2. Joined Communities
+                if (token && token !== "undefined") {
                     const joined = await fetchMyGroups();
                     setJoinedGroupsCount(joined.length);
-                    setAllGroupsCount(all.length+joined.length);
                 } else {
                     setJoinedGroupsCount(0);
                 }
 
+                // 3. Total Members
                 const membersCount = await fetchUsersCount();
                 setTotalMembersCount(membersCount);
 
-                setTotalPostsCount(
-                    all.reduce((acc, g) => acc + (g.postCount || 0), 0)
-                );
+                // 4. Total Posts (Робимо прямий запит до всіх постів, щоб гарантовано отримати точну кількість)
+                try {
+                    const postsResponse = await fetch(`http://localhost:8081/api/v1/posts/all?t=${new Date().getTime()}`);
+                    if (postsResponse.ok) {
+                        const allPostsData = await postsResponse.json();
+                        setTotalPostsCount(allPostsData.length);
+                    }
+                } catch (postErr) {
+                    console.error("Не вдалося завантажити кількість постів", postErr);
+                }
 
             } catch (e) {
                 console.error("Stats load failed", e);
@@ -110,36 +116,78 @@ export const GroupsPage: React.FC = () => {
         loadStats();
     }, []);
 
+    // LOAD GROUPS BASED ON ACTIVE TAB
     useEffect(() => {
         const loadGroups = async () => {
             setIsLoading(true);
             try {
                 const token = localStorage.getItem("access_token");
-                let backendGroups;
+                let backendGroups = [];
+
+                // Витягуємо ID поточного юзера з токена
+                let currentUserId: string | null = null;
+                if (token && token !== "undefined") {
+                    try {
+                        const payload = JSON.parse(atob(token.split('.')[1]));
+                        currentUserId = payload.sub;
+                    } catch (e) {
+                        console.error("Помилка парсингу токена", e);
+                    }
+                }
 
                 if (activeTab === 'joined') {
-                    if (!token) {
+                    if (!token || token === "undefined") {
                         setCommunities([]);
                         setIsLoading(false);
                         return;
                     }
                     backendGroups = await fetchMyGroups();
+
+                } else if (activeTab === 'myGroups') {
+                    if (!token || token === "undefined" || !currentUserId) {
+                        setCommunities([]);
+                        setIsLoading(false);
+                        return;
+                    }
+                    // Робимо прямий запит до бекенду, щоб отримати групи поточного власника
+                    try {
+                        const ownerRes = await fetch(`http://localhost:8081/api/v1/groups/owner/${currentUserId}`, {
+                            headers: { "Authorization": `Bearer ${token}` }
+                        });
+
+                        if (ownerRes.ok) {
+                            backendGroups = await ownerRes.json();
+                        } else {
+                            // Fallback: якщо ендпоінт не працює, фільтруємо вручну
+                            const allGroups = await fetchAllGroups();
+                            backendGroups = allGroups.filter((bg: any) =>
+                                String(bg.ownerId) === String(currentUserId) || String(bg.creatorId) === String(currentUserId)
+                            );
+                        }
+                    } catch (err) {
+                        const allGroups = await fetchAllGroups();
+                        backendGroups = allGroups.filter((bg: any) =>
+                            String(bg.ownerId) === String(currentUserId) || String(bg.creatorId) === String(currentUserId)
+                        );
+                    }
+
                 } else {
                     backendGroups = await fetchAllGroups();
                 }
 
-                const formattedGroups = backendGroups.map(bg => ({
+                const formattedGroups = backendGroups.map((bg: any) => ({
                     id: bg.id,
                     name: bg.name,
                     description: bg.description,
                     avatar: bg.name.substring(0, 2).toUpperCase(),
                     banner: "from-purple-500 to-pink-600",
-                    members: bg.memberCount || 0,
+                    members: bg.memberCount || bg.membersCount || 0,
                     posts: bg.postCount || 0,
                     category: "General",
-                    isJoined: activeTab === 'joined',
+                    isJoined: activeTab === 'joined' || activeTab === 'myGroups', // Якщо 'myGroups', він автоматично вважається приєднаним
                     isVerified: false,
-                    onlineMembers: 1
+                    onlineMembers: 1,
+                    ownerId: bg.ownerId || bg.creatorId
                 }));
 
                 setCommunities(formattedGroups);
@@ -162,7 +210,6 @@ export const GroupsPage: React.FC = () => {
     const [serverError, setServerError] = useState<string | null>(null);
 
     const openCreateModal = () => {
-        // ПЕРЕВІРКА НА АВТОРИЗАЦІЮ ПЕРЕД СТВОРЕННЯМ ГРУПИ
         if (!requireAuth(
             "Create Community",
             "Only registered members can create and manage new communities. Please log in to continue."
@@ -194,6 +241,14 @@ export const GroupsPage: React.FC = () => {
 
             const newBackendGroup = await createGroup(payload);
 
+            // Дістаємо поточного юзера для локального відображення
+            const token = localStorage.getItem("access_token");
+            let currentUserId = null;
+            if (token && token !== "undefined") {
+                const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+                currentUserId = tokenPayload.sub;
+            }
+
             const newCommunity: Community = {
                 id: newBackendGroup.id,
                 name: newBackendGroup.name,
@@ -206,21 +261,28 @@ export const GroupsPage: React.FC = () => {
                 isPrivate: data.visibility !== 'public',
                 isJoined: true,
                 isVerified: false,
-                onlineMembers: 1
+                onlineMembers: 1,
+                ownerId: currentUserId
             };
 
             setIsCreateOpen(false);
             setCommunities(prev => [newCommunity, ...prev]);
 
+            // Оновлюємо статистику
+            setAllGroupsCount(prev => prev + 1);
+            setJoinedGroupsCount(prev => prev + 1);
+
+            // Відразу переходимо на вкладку My Groups, щоб юзер побачив свою групу
+            setActiveTab('myGroups');
+
         } catch (err: any) {
-            setServerError("Не вдалося створити спільноту. Перевірте формат даних або сервер.", err);
+            setServerError("Не вдалося створити спільноту. Перевірте формат даних або сервер.");
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const toggleJoin = async (communityId: number) => {
-        // ПЕРЕВІРКА НА АВТОРИЗАЦІЮ ПЕРЕД ВСТУПОМ В ГРУПУ
         if (!requireAuth(
             "Join Community",
             "You need to log in to your account to join communities and interact with members."
@@ -275,10 +337,10 @@ export const GroupsPage: React.FC = () => {
             <div className="mb-8">
                 <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-3 transition-colors">
                     <Users className={`text-${accentColor}-500`} size={40}/>
-                    Communities
+                    Groups
                 </h1>
                 <p className="text-gray-500 dark:text-gray-400 text-lg transition-colors">
-                    Join communities and connect with people who share your interests
+                    Join groups and connect with people who share your interests
                 </p>
             </div>
 
@@ -290,7 +352,7 @@ export const GroupsPage: React.FC = () => {
                             <Users size={20} className="text-white"/>
                         </div>
                         <div>
-                            <p className="text-gray-600 dark:text-gray-400 text-xs font-medium">Total Communities</p>
+                            <p className="text-gray-600 dark:text-gray-400 text-xs font-medium">Available groups</p>
                             <p className="text-gray-900 dark:text-white text-xl font-bold">{allGroupsCount}</p>
                         </div>
                     </div>
@@ -341,16 +403,14 @@ export const GroupsPage: React.FC = () => {
                     <div className="flex gap-2">
                         {[
                             {id: 'discover', label: 'Discover'},
-                            {id: 'joined', label: 'My Communities'},
-                            {id: 'popular', label: 'Popular'}
+                            {id: 'joined', label: 'Joined'},
+                            {id: 'myGroups', label: 'My Groups'}
                         ].map((tab) => (
                             <button
                                 key={tab.id}
                                 onClick={() => {
-                                    if (tab.id === 'joined') {
-                                        if (!requireAuth("My Communities", "Please log in to view the communities you have joined.")) return;
-                                    }
-                                    setActiveTab(tab.id as 'discover' | 'joined' | 'popular');
+                                    if ((tab.id === 'joined' || tab.id === 'myGroups') && !requireAuth(tab.label, `Please log in to view ${tab.label.toLowerCase()}.`)) return;
+                                    setActiveTab(tab.id as 'discover' | 'joined' | 'myGroups');
                                 }}
                                 className={`px-4 py-2 rounded-lg transition-all font-medium ${
                                     activeTab === tab.id
@@ -403,121 +463,151 @@ export const GroupsPage: React.FC = () => {
                 </div>
             </div>
 
-            {/* Communities Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredCommunities.map((community) => (
-                    <div
-                        key={community.id}
-                        onClick={() => navigate(`/groups/${community.id}`)}
-                        className="bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-xl overflow-hidden hover:border-gray-300 dark:hover:border-gray-600 transition-all group shadow-sm hover:shadow-md cursor-pointer"
-                    >
-                        {/* Banner */}
-                        <div className={`h-24 bg-gradient-to-r ${community.banner} relative`}>
-                            <div className="absolute top-3 right-3 flex gap-2">
-                                {community.isVerified && (
-                                    <div className="bg-white/20 backdrop-blur-sm rounded-full p-1.5"
-                                         title="Verified Community">
-                                        <Shield size={14} className="text-white"/>
-                                    </div>
-                                )}
-                                {community.isPrivate && (
-                                    <div className="bg-white/20 backdrop-blur-sm rounded-full p-1.5"
-                                         title="Private Community">
-                                        <Lock size={14} className="text-white"/>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Content */}
-                        <div className="p-5">
-                            {/* Avatar */}
-                            <div className="flex items-start justify-between mb-3 -mt-12">
-                                <div className={`z-10 w-20 h-20 bg-gradient-to-r ${community.banner} rounded-xl flex items-center justify-center font-bold text-white text-2xl border-4 border-white dark:border-gray-800 shadow-md`}>
-                                    {community.avatar}
-                                </div>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation(); // Зупиняє клік, щоб не відбулося переходу на сторінку групи
-                                        toggleJoin(community.id);
-                                    }}
-                                    className={`z-10 px-4 py-2 rounded-lg transition-all font-medium flex items-center gap-2 ${
-                                        community.isJoined
-                                            ? 'bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
-                                            : `bg-${accentColor}-600 hover:bg-${accentColor}-700 text-white shadow-lg shadow-${accentColor}-500/20`
-                                    }`}
-                                >
-                                    {community.isJoined ? (
-                                        <>
-                                            <Check size={16}/>
-                                            Joined
-                                        </>
-                                    ) : (
-                                        <>
-                                            <UserPlus size={16}/>
-                                            Join
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-
-                            {/* Info */}
-                            <h3 className="text-gray-900 dark:text-white font-bold text-lg mb-1 flex items-center gap-2 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                                {community.name}
-                                {community.isVerified && (
-                                    <Star size={16} className="text-yellow-500 fill-yellow-500"/>
-                                )}
-                            </h3>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
-                                {community.description}
-                            </p>
-
-                            {/* Stats */}
-                            <div className="flex items-center justify-between text-sm">
-                                <div className="flex items-center gap-4 text-gray-500 dark:text-gray-400">
-                                    <div className="flex items-center gap-1" title="Members">
-                                        <Users size={14}/>
-                                        <span>{(community.members / 1000).toFixed(1)}k</span>
-                                    </div>
-                                    <div className="flex items-center gap-1" title="Posts">
-                                        <MessageSquare size={14}/>
-                                        <span>{(community.posts / 1000).toFixed(1)}k</span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-1 text-green-500">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"/>
-                                    <span className="text-xs font-medium">{community.onlineMembers} online</span>
-                                </div>
-                            </div>
-
-                            {/* Category Tag */}
-                            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/50">
-                                <span className={`inline-block px-3 py-1 bg-${accentColor}-50 dark:bg-${accentColor}-900/20 text-${accentColor}-700 dark:text-${accentColor}-300 rounded-full text-xs font-medium transition-colors`}>
-                                    {community.category}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Empty State */}
-            {filteredCommunities.length === 0 && (
-                <div className="bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-xl p-12 text-center shadow-sm">
-                    <Users size={48} className="text-gray-400 mx-auto mb-4"/>
-                    <h3 className="text-gray-900 dark:text-white font-bold text-xl mb-2">No communities found</h3>
-                    <p className="text-gray-500 dark:text-gray-400 mb-6">Try adjusting your search or filters</p>
-                    <button
-                        onClick={() => {
-                            setSearchQuery('');
-                            setSelectedCategory("All Categories");
-                            setActiveTab('discover');
-                        }}
-                        className={`px-6 py-3 bg-${accentColor}-600 hover:bg-${accentColor}-700 text-white rounded-lg transition-all shadow-lg shadow-${accentColor}-500/20 font-medium`}
-                    >
-                        Clear Filters
-                    </button>
+            {/* Content Loading */}
+            {isLoading ? (
+                <div className="flex justify-center items-center py-20">
+                    <div className={`animate-spin rounded-full h-12 w-12 border-b-2 border-${accentColor}-600`}></div>
                 </div>
+            ) : (
+                <>
+                    {/* Communities Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredCommunities.map((community) => (
+                            <div
+                                key={community.id}
+                                onClick={() => navigate(`/groups/${community.id}`)}
+                                className="bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-xl overflow-hidden hover:border-gray-300 dark:hover:border-gray-600 transition-all group shadow-sm hover:shadow-md cursor-pointer"
+                            >
+                                {/* Banner */}
+                                <div className={`h-24 bg-gradient-to-r ${community.banner} relative`}>
+                                    <div className="absolute top-3 right-3 flex gap-2">
+                                        {activeTab === 'myGroups' && (
+                                            <div className="bg-black/40 backdrop-blur-sm rounded-full p-1.5" title="You are the owner">
+                                                <Crown size={14} className="text-yellow-400"/>
+                                            </div>
+                                        )}
+                                        {community.isVerified && (
+                                            <div className="bg-white/20 backdrop-blur-sm rounded-full p-1.5"
+                                                 title="Verified Community">
+                                                <Shield size={14} className="text-white"/>
+                                            </div>
+                                        )}
+                                        {community.isPrivate && (
+                                            <div className="bg-white/20 backdrop-blur-sm rounded-full p-1.5"
+                                                 title="Private Community">
+                                                <Lock size={14} className="text-white"/>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Content */}
+                                <div className="p-5">
+                                    {/* Avatar */}
+                                    <div className="flex items-start justify-between mb-3 -mt-12">
+                                        <div className={`z-10 w-20 h-20 bg-gradient-to-r ${community.banner} rounded-xl flex items-center justify-center font-bold text-white text-2xl border-4 border-white dark:border-gray-800 shadow-md`}>
+                                            {community.avatar}
+                                        </div>
+                                        {/* Не показуємо кнопку Join на вкладці My Groups (бо там ти власник) */}
+                                        {activeTab !== 'myGroups' && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleJoin(community.id);
+                                                }}
+                                                className={`z-10 px-4 py-2 rounded-lg transition-all font-medium flex items-center gap-2 ${
+                                                    community.isJoined
+                                                        ? 'bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700'
+                                                        : `bg-${accentColor}-600 hover:bg-${accentColor}-700 text-white shadow-lg shadow-${accentColor}-500/20`
+                                                }`}
+                                            >
+                                                {community.isJoined ? (
+                                                    <>
+                                                        <Check size={16}/>
+                                                        Joined
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <UserPlus size={16}/>
+                                                        Join
+                                                    </>
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Info */}
+                                    <h3 className="text-gray-900 dark:text-white font-bold text-lg mb-1 flex items-center gap-2 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                                        {community.name}
+                                        {community.isVerified && (
+                                            <Star size={16} className="text-yellow-500 fill-yellow-500"/>
+                                        )}
+                                    </h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
+                                        {community.description}
+                                    </p>
+
+                                    {/* Stats */}
+                                    <div className="flex items-center justify-between text-sm">
+                                        <div className="flex items-center gap-4 text-gray-500 dark:text-gray-400">
+                                            <div className="flex items-center gap-1" title="Members">
+                                                <Users size={14}/>
+                                                <span>{(community.members / 1000).toFixed(1)}k</span>
+                                            </div>
+                                            <div className="flex items-center gap-1" title="Posts">
+                                                <MessageSquare size={14}/>
+                                                <span>{(community.posts / 1000).toFixed(1)}k</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-1 text-green-500">
+                                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"/>
+                                            <span className="text-xs font-medium">{community.onlineMembers} online</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Category Tag */}
+                                    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/50">
+                                        <span className={`inline-block px-3 py-1 bg-${accentColor}-50 dark:bg-${accentColor}-900/20 text-${accentColor}-700 dark:text-${accentColor}-300 rounded-full text-xs font-medium transition-colors`}>
+                                            {community.category}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Empty State */}
+                    {filteredCommunities.length === 0 && (
+                        <div className="bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-xl p-12 text-center shadow-sm">
+                            <Users size={48} className="text-gray-400 mx-auto mb-4"/>
+                            <h3 className="text-gray-900 dark:text-white font-bold text-xl mb-2">
+                                {activeTab === 'myGroups' ? "You haven't created any communities yet" : "No communities found"}
+                            </h3>
+                            <p className="text-gray-500 dark:text-gray-400 mb-6">
+                                {activeTab === 'myGroups' ? "Start your own community and invite others." : "Try adjusting your search or filters"}
+                            </p>
+                            {activeTab === 'myGroups' ? (
+                                <button
+                                    onClick={openCreateModal}
+                                    className={`px-6 py-3 bg-${accentColor}-600 hover:bg-${accentColor}-700 text-white rounded-lg transition-all shadow-lg shadow-${accentColor}-500/20 font-medium`}
+                                >
+                                    Create Your First Community
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => {
+                                        setSearchQuery('');
+                                        setSelectedCategory("All Categories");
+                                        setActiveTab('discover');
+                                    }}
+                                    className={`px-6 py-3 bg-${accentColor}-600 hover:bg-${accentColor}-700 text-white rounded-lg transition-all shadow-lg shadow-${accentColor}-500/20 font-medium`}
+                                >
+                                    Clear Filters
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </>
             )}
 
             {/* Create Community Modal */}
