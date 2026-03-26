@@ -44,7 +44,6 @@ public class UserController {
         return ResponseEntity.ok(dto);
     }
 
-    // ОСЬ ЦЕЙ МЕТОД ВЖЕ ЧУДОВО ОБРОБЛЯЄ ЗБЕРЕЖЕННЯ НАЛАШТУВАНЬ!
     @PutMapping("/{id}")
     public ResponseEntity<UserReadResponseDto> update(
             @PathVariable("id") final String userId,
