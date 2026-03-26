@@ -10,7 +10,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Table(name = "users")
@@ -71,7 +70,12 @@ public class User {
     @Enumerated(value = EnumType.STRING)
     Set<Role> roles = new HashSet<>();
 
-
-
+    @ManyToMany
+    @JoinTable(
+            name = "users_bookmarks",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "post_id")
+    )
+    Set<Post> bookmarks = new HashSet<>();
 
 }
