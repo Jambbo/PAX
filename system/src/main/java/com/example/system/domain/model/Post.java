@@ -53,7 +53,6 @@ public class Post {
     @Column(name = "image")
     List<String> images;
 
-    // @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-    // List<Comment> comments = new ArrayList<>();
-
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    List<Comment> comments;
 }

@@ -106,7 +106,30 @@ INSERT INTO posts_images (post_id, image) VALUES
                                               (3,'https://picsum.photos/301'),
                                               (4,'https://picsum.photos/302');
 
+-- =========================
+-- COMMENTS
+-- =========================
+INSERT INTO comments (id, post_id, author_id, content, likes, dislikes)
+VALUES
+    (1, 1, '550e8400-e29b-41d4-a716-446655440002', 'VERY COOL', 5, 0),
+    (2, 1, '550e8400-e29b-41d4-a716-446655440003', 'I do not like it', 3, 1),
+    (3, 2, '550e8400-e29b-41d4-a716-446655440001', 'Sounds good.', 10, 0),
+    (4, 3, '550e8400-e29b-41d4-a716-446655440005', 'Seems to be interesting', 8, 0),
+    (5, 4, '550e8400-e29b-41d4-a716-446655440001', '+rep', 2, 2),
+    (6, 6, '550e8400-e29b-41d4-a716-446655440003', 'I am first.', 6, 0);
+
+-- =========================
+-- BOOKMARKS
+-- =========================
+INSERT INTO users_bookmarks (user_id, post_id)
+VALUES
+    ('550e8400-e29b-41d4-a716-446655440001', 2),
+    ('550e8400-e29b-41d4-a716-446655440001', 3),
+    ('550e8400-e29b-41d4-a716-446655440002', 1),
+    ('550e8400-e29b-41d4-a716-446655440003', 4),
+    ('550e8400-e29b-41d4-a716-446655440005', 6);
 
 -- Fix sequences after mock data
 SELECT setval('groups_id_seq', (SELECT MAX(id) FROM groups));
 SELECT setval('posts_id_seq', (SELECT MAX(id) FROM posts));
+SELECT setval('comments_id_seq', (SELECT MAX(id) FROM comments));
