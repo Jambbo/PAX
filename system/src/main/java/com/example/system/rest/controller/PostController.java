@@ -7,6 +7,7 @@ import com.example.system.rest.dto.post.PostWriteDto;
 import com.example.system.rest.validation.OnCreate;
 import com.example.system.rest.validation.OnUpdate;
 import com.example.system.service.post.PostService;
+import com.example.system.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,7 @@ import java.util.List;
 public class PostController {
 
     private final PostService postService;
+    private final UserService userService;
     private final PostMapper postMapper;
 
     @PostMapping
@@ -108,11 +110,32 @@ public class PostController {
         return ResponseEntity.ok(dto);
     }
 
-    @PostMapping("/{id}/unlike")
-    public ResponseEntity<PostReadResponseDto> unlike(@PathVariable Long id) {
-        Post post = postService.decrementLikes(id);
-        PostReadResponseDto dto = postMapper.toDto(post);
-        return ResponseEntity.ok(dto);
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/{id}/bookmark")
+    public ResponseEntity<Void> addBookmark(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        userService.addBookmark(jwt.getSubject(), id);
+        return ResponseEntity.ok().build();
     }
 
+    @PreAuthorize("isAuthenticated()")
+    @DeleteMapping("/{id}/bookmark")
+    public ResponseEntity<Void> removeBookmark(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        userService.removeBookmark(jwt.getSubject(), id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/bookmarks")
+    public ResponseEntity<List<PostReadResponseDto>> getBookmarks(@AuthenticationPrincipal Jwt jwt) {
+        List<Post> posts = userService.getBookmarkedPosts(jwt.getSubject());
+        List<PostReadResponseDto> dtos = postMapper.toDto(posts);
+        return ResponseEntity.ok(dtos);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/{id}/bookmark/status")
+    public ResponseEntity<Boolean> getBookmarkStatus(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        boolean isBookmarked = userService.isBookmarked(jwt.getSubject(), id);
+        return ResponseEntity.ok(isBookmarked);
+    }
 }

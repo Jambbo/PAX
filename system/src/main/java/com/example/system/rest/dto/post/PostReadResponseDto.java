@@ -17,5 +17,6 @@ public record PostReadResponseDto(
         String groupName,
         List<String> images,
         String createdAt,
-        String updatedAt
+        String updatedAt,
+        Boolean isBookmarked
 ) {}

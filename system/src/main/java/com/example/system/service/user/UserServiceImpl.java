@@ -3,6 +3,8 @@ package com.example.system.service.user;
 import com.example.system.domain.model.User;
 import com.example.system.domain.model.UserStatus;
 import com.example.system.repository.UserRepository;
+import com.example.system.repository.PostRepository;
+import com.example.system.domain.model.Post;
 import com.example.system.rest.dto.mapper.UserMapper;
 import com.example.system.rest.dto.user.UserWriteDto;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final PostRepository postRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -84,11 +87,42 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<User> findLatestUsers(int limit) {
         return userRepository
                 .findLatestUsers(PageRequest.of(0, limit))
                 .getContent();
     }
 
+    @Override
+    @Transactional
+    public User addBookmark(String userId, Long postId) {
+        User user = findUserById(userId);
+        Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
+        user.getBookmarks().add(post);
+        return userRepository.save(user);
+    }
 
+    @Override
+    @Transactional
+    public User removeBookmark(String userId, Long postId) {
+        User user = findUserById(userId);
+        Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
+        user.getBookmarks().remove(post);
+        return userRepository.save(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Post> getBookmarkedPosts(String userId) {
+        User user = findUserById(userId);
+        return new java.util.ArrayList<>(user.getBookmarks());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isBookmarked(String userId, Long postId) {
+        User user = findUserById(userId);
+        return user.getBookmarks().stream().anyMatch(post -> post.getId().equals(postId));
+    }
 }

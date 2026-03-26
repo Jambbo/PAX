@@ -133,3 +133,12 @@ CREATE TABLE message_attachments
     file_size    BIGINT,
     CONSTRAINT fk_att_msg FOREIGN KEY (message_id) REFERENCES messages (id)
 );
+
+CREATE TABLE IF NOT EXISTS users_bookmarks
+(
+    user_id VARCHAR(36) NOT NULL,
+    post_id BIGINT      NOT NULL,
+    PRIMARY KEY (user_id, post_id),
+    CONSTRAINT fk_users_bookmarks_users FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_users_bookmarks_posts FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
+);
