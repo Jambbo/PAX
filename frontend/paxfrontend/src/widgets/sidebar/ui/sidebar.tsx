@@ -12,11 +12,12 @@ import {
     LogOut,
     Plus,
     Hash,
-    Calendar
+    Calendar,
+    Lock // Додано іконку замочка
 } from "lucide-react";
-// ДОДАНО useLocation ↓
 import { Link, useLocation } from "react-router-dom";
 import { logout } from "../../../features/Auth/authService";
+import { AuthModal } from "../../../widgets/AuthModal/AuthModal"; // Додано імпорт AuthModal
 
 interface SidebarProps {
     isOpen: boolean;
@@ -26,23 +27,18 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleMenu, isAuthenticated }) => {
     const [activeItem, setActiveItem] = useState("home");
-
-    // Ініціалізуємо хук для відслідковування URL
+    const [authModal, setAuthModal] = useState({ isOpen: false, title: "", message: "" }); // Стейт для модалки
     const location = useLocation();
 
     // --- ЛОГІКА СИНХРОНІЗАЦІЇ САЙДБАРУ З URL ---
     useEffect(() => {
-        // Беремо першу частину шляху (наприклад, з "/groups/123" дістанемо "groups")
         const pathSegment = location.pathname.split('/')[1];
-
-        // Якщо шлях пустий (ми на головній "/") або це "home"
         if (!pathSegment || pathSegment === 'home') {
             setActiveItem("home");
         } else {
-            // Інакше ставимо активним поточний розділ
             setActiveItem(pathSegment);
         }
-    }, [location.pathname]); // Спрацьовує щоразу, коли змінюється URL
+    }, [location.pathname]);
     // ------------------------------------------
 
     // --- ЛОГІКА КОЛЬОРІВ ---
@@ -54,10 +50,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleMenu, isAuthenti
         const handleStorageChange = () => {
             setAccentColor(localStorage.getItem('site_accent_color') || 'purple');
         };
-
         window.addEventListener('storage', handleStorageChange);
         window.addEventListener('accent-color-change', handleStorageChange);
-
         return () => {
             window.removeEventListener('storage', handleStorageChange);
             window.removeEventListener('accent-color-change', handleStorageChange);
@@ -65,13 +59,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleMenu, isAuthenti
     }, []);
     // -----------------------
 
+    // Додано поле requiresAuth і authMessage
     const menuItems = [
-        { id: "home", icon: Home, label: "Home", badge: null },
-        { id: "messages", icon: MessageSquare, label: "Messages", badge: "24" },
-        { id: "trending", icon: TrendingUp, label: "Trending", badge: 2 },
-        { id: "groups", icon: Users, label: "Groups", badge: null },
-        { id: "bookmarks", icon: Bookmark, label: "Bookmarks", badge: null },
-        { id: "notifications", icon: Bell, label: "Notifications", badge: "5" },
+        { id: "home", icon: Home, label: "Home", badge: null, requiresAuth: false },
+        { id: "messages", icon: MessageSquare, label: "Messages", badge: "24", requiresAuth: true, authMessage: "Please log in to view and send messages." },
+        { id: "trending", icon: TrendingUp, label: "Trending", badge: 2, requiresAuth: false },
+        { id: "groups", icon: Users, label: "Groups", badge: null, requiresAuth: false },
+        { id: "bookmarks", icon: Bookmark, label: "Bookmarks", badge: null, requiresAuth: true, authMessage: "Please log in to view your saved bookmarks." },
+        { id: "notifications", icon: Bell, label: "Notifications", badge: "5", requiresAuth: true, authMessage: "Please log in to see your notifications." },
     ];
 
     const quickLinks = [
@@ -80,6 +75,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleMenu, isAuthenti
         { id: "announcements", icon: Hash, label: "Announcements", color: "text-purple-500" },
         { id: "events", icon: Calendar, label: "Events", color: "text-orange-500" },
     ];
+
+    const handleNavClick = (e: React.MouseEvent, item: any) => {
+        if (item.requiresAuth && !isAuthenticated) {
+            e.preventDefault(); // Забороняємо перехід
+            setAuthModal({
+                isOpen: true,
+                title: "Authentication Required",
+                message: item.authMessage
+            });
+            return;
+        }
+        setActiveItem(item.id);
+    };
 
     return (
         <div
@@ -107,9 +115,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleMenu, isAuthenti
             {/* Main Navigation */}
             <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-800 scrollbar-track-transparent">
                 {menuItems.map((item) => (
-                    <Link to={`/${item.id === 'home' ? '' : item.id}`} key={item.id}>
+                    <Link
+                        to={item.requiresAuth && !isAuthenticated ? "#" : `/${item.id === 'home' ? '' : item.id}`}
+                        key={item.id}
+                        onClick={(e) => handleNavClick(e, item)}
+                    >
                         <button
-                            onClick={() => setActiveItem(item.id)}
                             className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group relative mb-1
                                 ${activeItem === item.id
                                 // Активний елемент: динамічний колір фону
@@ -123,6 +134,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleMenu, isAuthenti
                             {isOpen && (
                                 <>
                                     <span className="flex-1 text-left text-sm font-medium">{item.label}</span>
+
+                                    {/* Значок замочка, якщо потрібно */}
+                                    {item.requiresAuth && !isAuthenticated && (
+                                        <Lock size={14} className="text-gray-400 dark:text-gray-500 mr-1" />
+                                    )}
+
                                     {item.badge && (
                                         <span className={`text-white text-xs font-bold px-2 py-0.5 rounded-full bg-${accentColor}-500`}>
                                             {item.badge}
@@ -169,9 +186,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleMenu, isAuthenti
 
             {/* Bottom Actions */}
             <div className="border-t border-gray-200 dark:border-gray-800/50 p-3 space-y-2">
-                <Link to="/settings">
+                <Link to="/settings" onClick={(e) => {
+                    if (!isAuthenticated) {
+                        e.preventDefault();
+                        setAuthModal({
+                            isOpen: true,
+                            title: "Authentication Required",
+                            message: "Please log in to access your settings."
+                        });
+                    }
+                }}>
                     <button
-                        onClick={() => setActiveItem("settings")}
+                        onClick={() => isAuthenticated && setActiveItem("settings")}
                         className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200
                             ${activeItem === "settings"
                             ? "bg-gray-200 dark:bg-gray-800 text-gray-900 dark:text-white"
@@ -180,7 +206,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleMenu, isAuthenti
                         }
                     >
                         <Settings size={20} className="flex-shrink-0" />
-                        {isOpen && <span className="text-sm font-medium">Settings</span>}
+                        {isOpen && (
+                            <>
+                                <span className="text-sm font-medium flex-1 text-left">Settings</span>
+                                {!isAuthenticated && <Lock size={14} className="text-gray-400 dark:text-gray-500" />}
+                            </>
+                        )}
                     </button>
                 </Link>
 
@@ -194,6 +225,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleMenu, isAuthenti
                     </button>
                 )}
             </div>
+
+            {/* Auth Modal */}
+            <AuthModal
+                isOpen={authModal.isOpen}
+                onClose={() => setAuthModal({ ...authModal, isOpen: false })}
+                title={authModal.title}
+                message={authModal.message}
+            />
         </div>
     );
 };

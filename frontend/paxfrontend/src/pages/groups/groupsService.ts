@@ -14,7 +14,7 @@ export interface Group {
     description: string;
     groupPrivacy: GroupPrivacy;
     location?: string;
-    ownerId?: string;
+    ownerId?: string | number;
 }
 
 // Тип для створення (те, що ми передаємо в функцію)

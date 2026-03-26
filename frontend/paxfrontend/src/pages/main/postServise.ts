@@ -102,3 +102,67 @@ export async function deletePost(postId: number): Promise<void> {
         throw new Error("Не вдалося видалити пост");
     }
 }
+export async function likePost(postId: number): Promise<Post> {
+    const token = localStorage.getItem("access_token");
+    const headers: HeadersInit = {
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        "Content-Type": "application/json"
+    };
+
+    // Викликаємо твій PostController: @PostMapping("/{id}/like")
+    const response = await fetch(`${API_URL}/${postId}/like`, { method: "POST", headers });
+
+    if (!response.ok) {
+        throw new Error("Не вдалося лайкнути пост");
+    }
+
+    return response.json(); // Повертає оновлений пост із новими лайками
+}
+
+// Створюємо окремий інтерфейс для оновлення
+export interface UpdatePostDto {
+    id: number;       // Додаємо id, який часто вимагає Spring Boot
+    text: string;
+    groupId?: number; // Робимо не обов'язковим
+}
+
+// === ФУНКЦІЯ ОНОВЛЕННЯ (РЕДАГУВАННЯ) ПОСТА ===
+export async function updatePost(postId: number, data: UpdatePostDto): Promise<Post> {
+    const token = localStorage.getItem("access_token");
+    const headers: HeadersInit = {
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        "Content-Type": "application/json"
+    };
+
+    const response = await fetch(`${API_URL}/${postId}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+        // Читаємо відповідь від бекенду, щоб точно знати, яке поле не пройшло валідацію
+        const errorData = await response.text();
+        console.error("Бекенд відхилив запит (400):", errorData);
+        throw new Error("Не вдалося оновити пост");
+    }
+
+    return response.json();
+}
+
+export async function unlikePost(postId: number): Promise<Post> {
+    const token = localStorage.getItem("access_token");
+    const headers: HeadersInit = {
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        "Content-Type": "application/json"
+    };
+
+    // Викликаємо твій PostController: @PostMapping("/{id}/unlike")
+    const response = await fetch(`${API_URL}/${postId}/unlike`, { method: "POST", headers });
+
+    if (!response.ok) {
+        throw new Error("Не вдалося прибрати лайк");
+    }
+
+    return response.json();
+}

@@ -4,14 +4,19 @@ import {
     Camera, Save, Moon, Sun, Monitor, Loader2, CheckCircle, AlertCircle, X
 } from 'lucide-react';
 
-// Переконайся, що шлях до userService правильний!
+// ПЕРЕВІР ШЛЯХИ!
 import { fetchCurrentUser, updateUser } from '../../profile/userService';
+import { AuthModal } from '../../../widgets/AuthModal/AuthModal';
 
 export const SettingsPage: React.FC = () => {
-    // --- СТЕЙТИ НАВІГАЦІЇ ТА UI ---
-    const [activeTab, setActiveTab] = useState('profile');
+    // --- СТЕЙТИ АВТОРИЗАЦІЇ ---
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
-    // --- СТЕЙТ ДЛЯ ТОАСТ-СПОВІЩЕНЬ (Вспливаючі вікна) ---
+    // --- СТЕЙТИ НАВІГАЦІЇ ТА UI ---
+    const [activeTab, setActiveTab] = useState('appearance');
+
+    // --- СТЕЙТ ДЛЯ ТОАСТ-СПОВІЩЕНЬ ---
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
     // --- СТЕЙТИ ДАНИХ ЮЗЕРА ---
@@ -37,7 +42,6 @@ export const SettingsPage: React.FC = () => {
         return (saved && validColors.includes(saved)) ? saved : 'purple';
     });
 
-    // Стейт для показу паролів у вкладці Privacy
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
 
@@ -63,8 +67,22 @@ export const SettingsPage: React.FC = () => {
         window.dispatchEvent(new Event('accent-color-change'));
     }, [accentColor]);
 
-    // --- ЗАВАНТАЖЕННЯ ДАНИХ ЮЗЕРА З БЕКЕНДУ ---
+    // --- ЗАВАНТАЖЕННЯ ДАНИХ ЮЗЕРА АБО РЕЖИМ ГОСТЯ ---
     useEffect(() => {
+        const token = localStorage.getItem("access_token");
+        const hasToken = token && token !== "undefined";
+
+        setIsLoggedIn(hasToken);
+
+        if (!hasToken) {
+            // Якщо це гість, залишаємо на Appearance
+            setActiveTab('appearance');
+            setIsLoading(false);
+            return;
+        }
+
+        // Якщо юзер авторизований
+        setActiveTab('profile');
         const loadSettings = async () => {
             setIsLoading(true);
             try {
@@ -79,6 +97,8 @@ export const SettingsPage: React.FC = () => {
                 setCurrentUserId(data.id);
             } catch (err) {
                 console.error("Помилка завантаження налаштувань:", err);
+                setIsLoggedIn(false);
+                setActiveTab('appearance');
             } finally {
                 setIsLoading(false);
             }
@@ -86,13 +106,11 @@ export const SettingsPage: React.FC = () => {
         loadSettings();
     }, []);
 
-    // --- ФУНКЦІЯ ВИКЛИКУ СПОВІЩЕННЯ ---
     const showToast = (message: string, type: 'success' | 'error') => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
     };
 
-    // --- ЗБЕРЕЖЕННЯ ДАНИХ НА БЕКЕНД ---
     const handleSave = async () => {
         if (!currentUserId) return;
         setIsSaving(true);
@@ -104,6 +122,15 @@ export const SettingsPage: React.FC = () => {
         } finally {
             setIsSaving(false);
         }
+    };
+
+    // ОБРОБНИК КЛІКІВ ПО ВКЛАДКАХ
+    const handleTabClick = (tabId: string) => {
+        if (!isLoggedIn && tabId !== 'appearance') {
+            setIsAuthModalOpen(true); // Показуємо модалку для гостей
+            return;
+        }
+        setActiveTab(tabId);
     };
 
     // ==================== РЕНДЕРИНГ ВКЛАДОК ====================
@@ -394,20 +421,26 @@ export const SettingsPage: React.FC = () => {
                                     { id: 'notifications', icon: Bell, label: 'Notifications' },
                                     { id: 'privacy', icon: Shield, label: 'Privacy & Security' },
                                     { id: 'preferences', icon: Globe, label: 'Preferences' },
-                                ].map((item) => (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => setActiveTab(item.id)}
-                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                                            activeTab === item.id
-                                                ? `bg-${accentColor}-50 dark:bg-${accentColor}-900/20 text-${accentColor}-600 dark:text-${accentColor}-400`
-                                                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                                        }`}
-                                    >
-                                        <item.icon size={18} />
-                                        {item.label}
-                                    </button>
-                                ))}
+                                ].map((item) => {
+                                    // Перевірка: чи заблокована вкладка для гостя
+                                    const isRestricted = !isLoggedIn && item.id !== 'appearance';
+
+                                    return (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => handleTabClick(item.id)}
+                                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                                                activeTab === item.id
+                                                    ? `bg-${accentColor}-50 dark:bg-${accentColor}-900/20 text-${accentColor}-600 dark:text-${accentColor}-400`
+                                                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                                            } ${isRestricted ? 'opacity-60 cursor-pointer' : ''}`}
+                                        >
+                                            <item.icon size={18} />
+                                            <span className="flex-1 text-left">{item.label}</span>
+                                            {isRestricted && <Lock size={14} className="text-gray-400" />}
+                                        </button>
+                                    );
+                                })}
                             </nav>
                         </div>
                     </div>
@@ -422,23 +455,33 @@ export const SettingsPage: React.FC = () => {
                             {activeTab === 'preferences' && renderPreferencesTab()}
                         </div>
 
-                        {/* Save Button */}
-                        <div className="mt-6 flex justify-end gap-3">
-                            <button className={`px-6 py-3 bg-white border border-gray-200 hover:bg-gray-50 dark:bg-gray-800/50 dark:border-transparent dark:hover:bg-gray-700 dark:text-white ${textMain} rounded-lg transition-colors font-medium`}>
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleSave}
-                                disabled={isSaving}
-                                className={`px-6 py-3 bg-gradient-to-r from-${accentColor}-600 to-indigo-600 hover:opacity-90 text-white rounded-lg transition-all shadow-lg shadow-${accentColor}-500/20 font-medium flex items-center gap-2 disabled:opacity-50`}
-                            >
-                                {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                                Save Changes
-                            </button>
-                        </div>
+                        {/* Кнопки збереження показуються ТІЛЬКИ авторизованим юзерам */}
+                        {isLoggedIn && (
+                            <div className="mt-6 flex justify-end gap-3">
+                                <button className={`px-6 py-3 bg-white border border-gray-200 hover:bg-gray-50 dark:bg-gray-800/50 dark:border-transparent dark:hover:bg-gray-700 dark:text-white ${textMain} rounded-lg transition-colors font-medium`}>
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={isSaving}
+                                    className={`px-6 py-3 bg-gradient-to-r from-${accentColor}-600 to-indigo-600 hover:opacity-90 text-white rounded-lg transition-all shadow-lg shadow-${accentColor}-500/20 font-medium flex items-center gap-2 disabled:opacity-50`}
+                                >
+                                    {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                                    Save Changes
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
+
+            {/* === МОДАЛКА АВТОРИЗАЦІЇ === */}
+            <AuthModal
+                isOpen={isAuthModalOpen}
+                onClose={() => setIsAuthModalOpen(false)}
+                title="Authentication Required"
+                message="You need to log in to your account to change these settings."
+            />
 
             {/* === СПЛИВАЮЧЕ ВІКНО (TOAST) === */}
             {toast && (
