@@ -1,9 +1,9 @@
 package com.example.system.service.user;
 
+import com.example.system.domain.model.Post;
 import com.example.system.domain.model.User;
 import com.example.system.domain.model.UserStatus;
 import com.example.system.rest.dto.user.UserWriteDto;
-import com.example.system.domain.model.Post;
 
 import java.util.List;
 
@@ -35,4 +35,6 @@ public interface UserService {
     List<Post> getBookmarkedPosts(String userId);
 
     boolean isBookmarked(String userId, Long postId);
+
+    List<User> search(String query, String userId);
 }

@@ -41,7 +41,14 @@ export const MessagesPage: React.FC = () => {
     // ОРИГІНАЛЬНА ЛОГІКА (БЕЗ ЗМІН)
     // =========================================================================
     const [users, setUsers] = useState<User[]>([]);
+    const [conversationUsers, setConversationUsers] = useState<User[]>([]);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const selectedUserRef = useRef<User | null>(null);
+
+    useEffect(() => {
+        selectedUserRef.current = selectedUser;
+    }, [selectedUser]);
+
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState("");
     const [client, setClient] = useState<Client | null>(null);
@@ -55,6 +62,49 @@ export const MessagesPage: React.FC = () => {
         const payload = JSON.parse(atob(token.split(".")[1]));
         return payload.sub;
     };
+
+    const fetchConversations = (userId: string) => {
+        fetch("http://localhost:8081/api/chat/conversations", {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem("access_token")}`
+            }
+        })
+            .then(async res => {
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                return res.json();
+            })
+            .then(data => {
+                if (Array.isArray(data)) {
+                    const loadedUsers: User[] = [];
+                    const newConvMap: Record<string, string> = {};
+
+                    data.forEach(conv => {
+                        const otherUser = Array.isArray(conv.members) 
+                            ? conv.members.find((p: any) => p.id !== userId) 
+                            : null;
+
+                        if (otherUser) {
+                            if (!loadedUsers.some(u => u.id === otherUser.id)) {
+                                loadedUsers.push({
+                                    id: otherUser.id,
+                                    username: otherUser.username
+                                });
+                            }
+                            newConvMap[otherUser.id] = conv.id;
+                        }
+                    });
+                    
+                    setConversationUsers(loadedUsers);
+                    setConversationMap(prev => ({ ...prev, ...newConvMap }));
+                }
+            })
+            .catch(err => console.error("Error fetching conversations:", err));
+    };
+
+    // fetch existing conversations
+    useEffect(() => {
+        if (currentUserId) fetchConversations(currentUserId);
+    }, [currentUserId]);
 
     // websocket connect
     useEffect(() => {
@@ -80,17 +130,25 @@ export const MessagesPage: React.FC = () => {
                     return [...prev, body];
                 });
 
-                // detect other participant
-                const otherUserId =
-                    body.senderId === userId
-                        ? getRecipientFromConversation(body, userId)
-                        : body.senderId;
-
-                if (otherUserId) {
-                    setConversationMap(prev => ({
-                        ...prev,
-                        [otherUserId]: body.conversationId
-                    }));
+                if (body.senderId !== userId) {
+                    setConversationMap(prev => {
+                        if (prev[body.senderId] !== body.conversationId) {
+                            return { ...prev, [body.senderId]: body.conversationId };
+                        }
+                        return prev;
+                    });
+                } else {
+                    setConversationMap(prev => {
+                        const isKnown = Object.values(prev).includes(body.conversationId);
+                        if (!isKnown) {
+                            setTimeout(() => fetchConversations(userId), 100);
+                            
+                            if (selectedUserRef.current && !prev[selectedUserRef.current.id]) {
+                                return { ...prev, [selectedUserRef.current.id]: body.conversationId };
+                            }
+                        }
+                        return prev;
+                    });
                 }
             });
         };
@@ -101,31 +159,28 @@ export const MessagesPage: React.FC = () => {
         return () => stompClient.deactivate();
     }, []);
 
-    // helper to detect other user
-    const getRecipientFromConversation = (
-        message: ChatMessage,
-        me: string
-    ) => {
-        const match = messages.find(
-            m =>
-                m.conversationId === message.conversationId &&
-                m.senderId !== me
-        );
-        return match?.senderId;
-    };
 
     // load users
     useEffect(() => {
-        fetch("http://localhost:8081/api/v1/users/latest", {
-            headers: {
-                Authorization: `Bearer ${localStorage.getItem("access_token")}`
-            }
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (Array.isArray(data)) setUsers(data);
-            });
-    }, []);
+        if (!searchQuery.trim()) {
+            setUsers([]);
+        } else {
+            const timeoutId = setTimeout(() => {
+                fetch(`http://localhost:8081/api/v1/users/search?username=${encodeURIComponent(searchQuery)}`, {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem("access_token")}`
+                    }
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (Array.isArray(data)) setUsers(data);
+                    })
+                    .catch(err => console.error(err));
+            }, 300);
+
+            return () => clearTimeout(timeoutId);
+        }
+    }, [searchQuery]);
 
     const sendMessage = () => {
         if (!input.trim() || !selectedUser || !client) return;
@@ -143,19 +198,62 @@ export const MessagesPage: React.FC = () => {
 
     const activeConversationId = selectedUser ? conversationMap[selectedUser.id] : null;
 
+    // fetch message history for the active conversation
+    useEffect(() => {
+        if (!activeConversationId) return;
+
+        fetch(`http://localhost:8081/api/chat/${activeConversationId}?page=0&size=50`, {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem("access_token")}`
+            }
+        })
+            .then(res => res.json())
+            .then(data => {
+                // Spring Data Rest usually puts the list in `content`
+                if (data && Array.isArray(data.content)) {
+                    const history = data.content.map((m: any) => ({
+                        id: m.id,
+                        conversationId: m.conversationId,
+                        senderId: m.senderId,
+                        content: m.content,
+                        createdAt: m.createdAt
+                    }));
+
+                    setMessages(prev => {
+                        const newMessages = [...prev];
+                        history.forEach((hm: ChatMessage) => {
+                            if (!newMessages.some(existing => existing.id === hm.id)) {
+                                newMessages.push(hm);
+                            }
+                        });
+
+                        // Sort chronologically
+                        return newMessages.sort((a, b) => {
+                            const timeA = a.createdAt ? new Date(a.createdAt).getTime() : Number.MAX_SAFE_INTEGER;
+                            const timeB = b.createdAt ? new Date(b.createdAt).getTime() : Number.MAX_SAFE_INTEGER;
+                            return timeA - timeB;
+                        });
+                    });
+                }
+            })
+            .catch(err => console.error("Error fetching message history:", err));
+    }, [activeConversationId]);
+
     const filteredMessages = messages.filter(
         m => m.conversationId === activeConversationId
     );
 
-    // Скрол донизу при зміні вибраного юзера або масиву повідомлень
     useEffect(() => {
         scrollToBottom();
     }, [filteredMessages, selectedUser]);
 
-    // Локальний пошук для UI
-    const displayedUsers = users.filter(u =>
-        u.username.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // Відображаємо користувачів з бекенду
+    const displayedUsers = users;
+
+    const allSidebarUsers = [...conversationUsers];
+    if (selectedUser && !allSidebarUsers.some(u => u.id === selectedUser.id)) {
+        allSidebarUsers.unshift(selectedUser);
+    }
 
     // =========================================================================
     // НОВИЙ ІНТЕРФЕЙС
@@ -171,7 +269,7 @@ export const MessagesPage: React.FC = () => {
                 </div>
 
                 {/* Пошук */}
-                <div className="p-3">
+                <div className="p-3 relative z-20">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                         <input
@@ -182,14 +280,40 @@ export const MessagesPage: React.FC = () => {
                             className={`w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-${accentColor}-500 transition-shadow shadow-sm`}
                         />
                     </div>
+                    {/* Search Dropdown */}
+                    {searchQuery.trim() !== "" && (
+                        <div className="absolute top-full left-3 right-3 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-64 overflow-y-auto no-scrollbar z-50">
+                            {displayedUsers.length === 0 ? (
+                                <div className="p-4 text-center text-sm text-gray-500">No users found.</div>
+                            ) : (
+                                displayedUsers.map((user) => (
+                                    <div
+                                        key={user.id}
+                                        onClick={() => {
+                                            setSelectedUser(user);
+                                            setSearchQuery(""); // Clear search on select
+                                        }}
+                                        className="flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0"
+                                    >
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 bg-${accentColor}-100 dark:bg-${accentColor}-900/30 text-${accentColor}-600`}>
+                                            {user.username ? user.username.charAt(0).toUpperCase() : '?'}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-medium text-gray-900 dark:text-white truncate">
+                                                {user.username}
+                                            </h3>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Список користувачів */}
                 <div className="flex-1 overflow-y-auto no-scrollbar p-2 space-y-1">
-                    {displayedUsers.length === 0 ? (
-                        <div className="text-center text-gray-500 py-6 text-sm">No users found.</div>
-                    ) : (
-                        displayedUsers.map((user) => {
+                    {allSidebarUsers.length > 0 ? (
+                        allSidebarUsers.map((user) => {
                             const isSelected = selectedUser?.id === user.id;
                             const avatarLetter = user.username ? user.username.charAt(0).toUpperCase() : '?';
 
@@ -223,6 +347,8 @@ export const MessagesPage: React.FC = () => {
                                 </div>
                             );
                         })
+                    ) : (
+                        <div className="text-center text-gray-500 py-6 text-sm">Use the search bar above to find users.</div>
                     )}
                 </div>
             </div>

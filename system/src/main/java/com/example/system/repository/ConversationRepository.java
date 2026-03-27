@@ -17,4 +17,12 @@ public interface ConversationRepository extends JpaRepository<Conversation, Stri
         AND m2.id = :user2
     """)
     Optional<Conversation> findPrivateConversation(String user1, String user2);
+
+    @Query("""
+        SELECT c FROM Conversation c
+        JOIN c.members m
+        WHERE m.id = :userId AND c.deleted = false
+        ORDER BY c.createdAt DESC
+    """)
+    java.util.List<Conversation> findConversationsByUserId(String userId);
 }

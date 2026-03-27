@@ -44,8 +44,10 @@ public class UserController {
         return ResponseEntity.ok(dto);
     }
 
+    @PreAuthorize("isAuthenticated() and #jwt.subject == #userId")
     @PutMapping("/{id}")
     public ResponseEntity<UserReadResponseDto> update(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable("id") final String userId,
             @Validated(OnUpdate.class) @RequestBody UserWriteDto userWriteDto
     ) {
@@ -75,6 +77,7 @@ public class UserController {
         ));
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PatchMapping("/me/status")
     public ResponseEntity<UserReadResponseDto> updateMyStatus(
             @AuthenticationPrincipal Jwt jwt,
@@ -86,9 +89,21 @@ public class UserController {
         return ResponseEntity.ok(dto);
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PatchMapping("/me/profile-privacy")
     public User toggleMyPrivacy(@AuthenticationPrincipal Jwt jwt) {
         return userService.toggleProfilePrivacy(jwt.getSubject());
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/search")
+    public ResponseEntity<List<UserReadResponseDto>> search(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam String username
+    ) {
+        List<UserReadResponseDto> searchedUsers = userMapper.toDto(
+                userService.search(username,jwt.getSubject()));
+        return ResponseEntity.ok(searchedUsers);
     }
 
     @GetMapping("/latest")

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +22,13 @@ public class ChatServiceImpl implements ChatService{
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
+
+    @Override
+    @Transactional
+    public java.util.List<Conversation> getUserConversations(String userId) {
+        List<Conversation> conversationsByUserId = conversationRepository.findConversationsByUserId(userId);
+        return conversationsByUserId;
+    }
 
     @Override
     @Transactional
