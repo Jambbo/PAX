@@ -1,10 +1,10 @@
 package com.example.system.service.user;
 
+import com.example.system.domain.model.Post;
 import com.example.system.domain.model.User;
 import com.example.system.domain.model.UserStatus;
-import com.example.system.repository.UserRepository;
 import com.example.system.repository.PostRepository;
-import com.example.system.domain.model.Post;
+import com.example.system.repository.UserRepository;
 import com.example.system.rest.dto.mapper.UserMapper;
 import com.example.system.rest.dto.user.UserWriteDto;
 import lombok.RequiredArgsConstructor;
@@ -124,5 +124,10 @@ public class UserServiceImpl implements UserService {
     public boolean isBookmarked(String userId, Long postId) {
         User user = findUserById(userId);
         return user.getBookmarks().stream().anyMatch(post -> post.getId().equals(postId));
+    }
+
+    @Override
+    public List<User> search(String query, String userId) {
+        return userRepository.findTop10ByUsernameStartingWithIgnoreCaseAndIdNotOrderByUsernameAsc(query, userId);
     }
 }
