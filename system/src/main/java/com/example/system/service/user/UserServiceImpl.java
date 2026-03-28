@@ -12,7 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -24,7 +24,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public User findUserById(String userId) {
+    public User getUserById(String userId) {
         return userRepository.findById(userId).orElseThrow(
                 () -> new RuntimeException("User with id=" + userId + " not found.")
         );
@@ -40,7 +40,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public User update(String id, UserWriteDto dto) {
         //retrieving existingUser to use its id in order to have a consistent id from db for the updated user
-        User existingUser = findUserById(id);
+        User existingUser = getUserById(id);
         userMapper.updateEntityFromDto(dto, existingUser);
         return userRepository.save(existingUser);
     }
@@ -61,14 +61,14 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deleteUser(String userId) {
-        User user = findUserById(userId);
+        User user = getUserById(userId);
         userRepository.delete(user);
     }
 
     @Override
     @Transactional
     public User updateStatus(String userId, UserStatus status) {
-        User user = findUserById(userId);
+        User user = getUserById(userId);
         user.setStatus(status);
         return userRepository.save(user);
     }
@@ -76,7 +76,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public User toggleProfilePrivacy(String userId) {
-        User user = findUserById(userId);
+        User user = getUserById(userId);
         user.setProfilePrivate(!user.isProfilePrivate());
         return userRepository.save(user);
     }
@@ -97,7 +97,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public User addBookmark(String userId, Long postId) {
-        User user = findUserById(userId);
+        User user = getUserById(userId);
         Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
         user.getBookmarks().add(post);
         return userRepository.save(user);
@@ -106,7 +106,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public User removeBookmark(String userId, Long postId) {
-        User user = findUserById(userId);
+        User user = getUserById(userId);
         Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
         user.getBookmarks().remove(post);
         return userRepository.save(user);
@@ -115,19 +115,27 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public List<Post> getBookmarkedPosts(String userId) {
-        User user = findUserById(userId);
-        return new java.util.ArrayList<>(user.getBookmarks());
+        User user = getUserById(userId);
+        return new ArrayList<>(user.getBookmarks());
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean isBookmarked(String userId, Long postId) {
-        User user = findUserById(userId);
+        User user = getUserById(userId);
         return user.getBookmarks().stream().anyMatch(post -> post.getId().equals(postId));
     }
 
     @Override
     public List<User> search(String query, String userId) {
         return userRepository.findTop10ByUsernameStartingWithIgnoreCaseAndIdNotOrderByUsernameAsc(query, userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Post> getLikedPostsByUserId(String userId) {
+        User user = getUserById(userId);
+        return new ArrayList<>(user.getLikedPosts());
+
     }
 }

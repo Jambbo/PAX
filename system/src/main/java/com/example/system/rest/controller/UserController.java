@@ -1,8 +1,11 @@
 package com.example.system.rest.controller;
 
+import com.example.system.domain.model.Post;
 import com.example.system.domain.model.User;
 import com.example.system.domain.model.UserStatus;
+import com.example.system.rest.dto.mapper.PostMapper;
 import com.example.system.rest.dto.mapper.UserMapper;
+import com.example.system.rest.dto.post.PostReadResponseDto;
 import com.example.system.rest.dto.user.UserReadResponseDto;
 import com.example.system.rest.dto.user.UserWriteDto;
 import com.example.system.rest.validation.OnUpdate;
@@ -25,10 +28,11 @@ public class UserController {
 
     private final UserService userService;
     private final UserMapper userMapper;
+    private final PostMapper postMapper;
 
     @GetMapping("/{id}")
     public ResponseEntity<UserReadResponseDto> getById(@PathVariable("id") final String userId) {
-        UserReadResponseDto dto = userMapper.toDto(userService.findUserById(userId));
+        UserReadResponseDto dto = userMapper.toDto(userService.getUserById(userId));
         return ResponseEntity.ok(dto);
     }
 
@@ -42,6 +46,15 @@ public class UserController {
     public ResponseEntity<List<UserReadResponseDto>> getAll() {
         List<UserReadResponseDto> dto = userMapper.toDto(userService.findAll());
         return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping("/likedPosts")
+    public ResponseEntity<List<PostReadResponseDto>> getLikedPosts(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        List<Post> likedPostsByUserId = userService.getLikedPostsByUserId(jwt.getSubject());
+        List<PostReadResponseDto> likedPostsDto = postMapper.toDto(likedPostsByUserId);
+        return ResponseEntity.ok(likedPostsDto);
     }
 
     @PreAuthorize("isAuthenticated() and #jwt.subject == #userId")
@@ -102,7 +115,7 @@ public class UserController {
             @RequestParam String username
     ) {
         List<UserReadResponseDto> searchedUsers = userMapper.toDto(
-                userService.search(username,jwt.getSubject()));
+                userService.search(username, jwt.getSubject()));
         return ResponseEntity.ok(searchedUsers);
     }
 

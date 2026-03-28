@@ -78,4 +78,12 @@ public class User {
     )
     Set<Post> bookmarks = new HashSet<>();
 
+    @ManyToMany
+    @JoinTable(
+            name = "users_likedposts",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "post_id")
+    )
+    Set<Post> likedPosts = new HashSet<>();
+
 }
