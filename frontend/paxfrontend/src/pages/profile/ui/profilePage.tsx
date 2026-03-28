@@ -147,7 +147,7 @@ export const ProfilePage: React.FC = () => {
                         if (token && token !== "undefined") headers["Authorization"] = `Bearer ${token}`;
 
                         // Запит на бекенд: отримати лайки конкретного юзера (userData.id)
-                        const likesRes = await fetch(`http://localhost:8081/api/v1/users/${userData.id}/likes`, { headers });
+                        const likesRes = await fetch(`http://localhost:8081/api/v1/users/${userData.id}/likedPosts`, { headers });
 
                         if (likesRes.ok) {
                             const likedData = await likesRes.json();
