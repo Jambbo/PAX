@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // ДОДАНО ІМПОРТ useNavigate
 import {
     Heart,
     Eye,
@@ -51,6 +52,8 @@ export const PostItem: React.FC<PostItemProps> = ({
                                                       onEditSave,
                                                       onImageClick
                                                   }) => {
+    const navigate = useNavigate(); // Ініціалізуємо навігацію
+
     // --- СТЕНИ ДЛЯ САМОГО ПОСТА ---
     const [isEditing, setIsEditing] = useState(false);
     const [editPostText, setEditPostText] = useState(post.text);
@@ -67,6 +70,7 @@ export const PostItem: React.FC<PostItemProps> = ({
     const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
     const [editCommentText, setEditCommentText] = useState("");
     const [isUpdatingComment, setIsUpdatingComment] = useState(false);
+
     // Ініціалізуємо стан реакцій на коментарі з пам'яті браузера
     const [commentInteractions, setCommentInteractions] = useState<Record<number, 'LIKE' | 'DISLIKE'>>(() => {
         const saved = localStorage.getItem('pax_comment_interactions');
@@ -279,6 +283,14 @@ export const PostItem: React.FC<PostItemProps> = ({
         );
     };
 
+    // Навігація на сторінку профілю
+    const handleProfileClick = (e: React.MouseEvent, userId: string | undefined) => {
+        e.stopPropagation();
+        if (userId) {
+            navigate(`/profile/${userId}`);
+        }
+    };
+
     return (
         <div
             className={`bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/50 rounded-2xl p-5 hover:border-gray-300 transition-all shadow-sm group relative cursor-pointer ${
@@ -287,15 +299,23 @@ export const PostItem: React.FC<PostItemProps> = ({
         >
             {/* Шапка поста */}
             <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
+                {/* Обернули аватар і ім'я в div з onClick для переходу */}
+                <div
+                    className="flex items-center gap-3 cursor-pointer group/author hover:opacity-80 transition-opacity"
+                    onClick={(e) => handleProfileClick(e, post.authorId)}
+                    title="View Profile"
+                >
                     <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-500 uppercase text-xs border border-gray-300 dark:border-gray-600">
                         {post.authorUsername ? post.authorUsername[0] : '?'}
                     </div>
                     <div>
-                        <p className="font-bold text-gray-900 dark:text-white text-sm">{post.authorUsername || `User ID: ${post.authorId}`}</p>
+                        <p className={`font-bold text-gray-900 dark:text-white text-sm group-hover/author:text-${accentColor}-600 dark:group-hover/author:text-${accentColor}-400 transition-colors`}>
+                            {post.authorUsername || `User ID: ${post.authorId}`}
+                        </p>
                         <p className="text-xs text-gray-500">{new Date(post.createdAt).toLocaleDateString()}</p>
                     </div>
                 </div>
+
                 {canEditOrDelete && (
                     <div className="flex items-center gap-2">
                         <button onClick={(e) => { e.stopPropagation(); setIsEditing(true); setIsCommentsOpen(false); }} className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 dark:bg-gray-800/50 dark:hover:bg-gray-700 dark:text-gray-300 transition-colors" title="Edit Post">
@@ -410,13 +430,24 @@ export const PostItem: React.FC<PostItemProps> = ({
 
                                 return (
                                     <div key={comment.id} className="flex gap-3 group/comment">
-                                        <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300">
+                                        {/* Аватар коментатора (клікабельний) */}
+                                        <div
+                                            className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300 cursor-pointer hover:opacity-80 transition-opacity"
+                                            onClick={(e) => handleProfileClick(e, comment.authorId)}
+                                            title="View Profile"
+                                        >
                                             {comment.authorUsername ? comment.authorUsername[0].toUpperCase() : '?'}
                                         </div>
                                         <div className="flex-1">
                                             <div className="bg-gray-100 dark:bg-gray-800/60 rounded-2xl rounded-tl-sm p-3 relative shadow-sm">
                                                 <div className="flex justify-between items-start mb-1">
-                                                    <span className="font-bold text-[13px] text-gray-900 dark:text-white">{comment.authorUsername || `User ${comment.authorId}`}</span>
+                                                    {/* Ім'я коментатора (клікабельне) */}
+                                                    <span
+                                                        className={`font-bold text-[13px] text-gray-900 dark:text-white cursor-pointer hover:text-${accentColor}-600 dark:hover:text-${accentColor}-400 transition-colors`}
+                                                        onClick={(e) => handleProfileClick(e, comment.authorId)}
+                                                    >
+                                                        {comment.authorUsername || `User ${comment.authorId}`}
+                                                    </span>
                                                     <span className="text-[11px] text-gray-400">{new Date(comment.createdAt).toLocaleDateString()}</span>
                                                 </div>
 
