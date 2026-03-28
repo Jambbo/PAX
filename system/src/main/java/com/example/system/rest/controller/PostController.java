@@ -61,7 +61,7 @@ public class PostController {
         return ResponseEntity.ok(dto);
     }
 
-    @PreAuthorize("@ownership.isOwner(#postId) or hasRole('ADMIN')")
+    @PreAuthorize("@ownership.isOwner(#postId) or @ownership.isPostGroupOwner(#postId) or hasRole('ADMIN')")
     @DeleteMapping("/{postId}")
     public ResponseEntity<Void> delete(@PathVariable Long postId) {
         postService.deletePost(postId);

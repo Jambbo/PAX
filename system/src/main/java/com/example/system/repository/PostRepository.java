@@ -26,4 +26,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<Post> findTopByLikes();
 
     boolean existsByIdAndAuthorId(Long postId, String currentUserId);
+
+    boolean existsByIdAndGroupOwnerId(Long postId, String currentUserId);
 }
