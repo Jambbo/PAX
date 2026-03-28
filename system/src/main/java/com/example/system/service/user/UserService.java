@@ -8,7 +8,7 @@ import com.example.system.rest.dto.user.UserWriteDto;
 import java.util.List;
 
 public interface UserService {
-    User findUserById(String userId);
+    User getUserById(String userId);
 
     List<User> findAll();
 
@@ -37,4 +37,6 @@ public interface UserService {
     boolean isBookmarked(String userId, Long postId);
 
     List<User> search(String query, String userId);
+
+    List<Post> getLikedPostsByUserId(String userId);
 }

@@ -26,7 +26,6 @@ public interface PostService {
 
     Post incrementViews(Long id);
 
-    Post incrementLikes(Long id);
+    Post incrementLikesAndAddToUser(Long postId, String userId);
 
-    Post decrementLikes(Long id);
 }

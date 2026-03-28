@@ -1,13 +1,16 @@
 package com.example.system.service.post;
 
 import com.example.system.domain.model.Post;
+import com.example.system.domain.model.User;
 import com.example.system.repository.PostRepository;
+import com.example.system.repository.UserRepository;
 import com.example.system.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -15,6 +18,7 @@ public class PostServiceImpl implements PostService {
 
     private final PostRepository postRepository;
     private final UserService userService;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
@@ -27,7 +31,7 @@ public class PostServiceImpl implements PostService {
             post.setLikes(0L);
         }
 
-        post.setAuthor(userService.findUserById(ownerId));
+        post.setAuthor(userService.getUserById(ownerId));
 
         return postRepository.save(post);
     }
@@ -105,18 +109,23 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional
-    public Post incrementLikes(Long id) {
-        Post post = getPostById(id);
-        post.setLikes(post.getLikes() != null ? post.getLikes() + 1 : 1L);
+    public Post incrementLikesAndAddToUser(Long postId, String userId) {
+        Post post = getPostById(postId);
+        User user = userService.getUserById(userId);
+        Set<Post> likedPosts = user.getLikedPosts();
+        if(!likedPosts.contains(post)){
+            post.setLikes(post.getLikes() != null ? post.getLikes() + 1 : 1L);
+            likedPosts.add(post);
+        }else{
+            long currentLikes = post.getLikes() != null ? post.getLikes() : 0L;
+            post.setLikes(Math.max(0L, currentLikes - 1));
+            likedPosts.remove(post);
+        }
+        user.setLikedPosts(likedPosts);
+        userRepository.save(user);
         return postRepository.save(post);
     }
 
-    @Override
-    @Transactional
-    public Post decrementLikes(Long id) {
-        Post post = getPostById(id);
-        long currentLikes = post.getLikes() != null ? post.getLikes() : 0L;
-        post.setLikes(Math.max(0L, currentLikes - 1));
-        return postRepository.save(post);
-    }
+
+
 }

@@ -103,19 +103,17 @@ public class PostController {
         return ResponseEntity.ok(dto);
     }
 
-    @PostMapping("/{id}/like")
-    public ResponseEntity<PostReadResponseDto> like(@PathVariable Long id) {
-        Post post = postService.incrementLikes(id);
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/{postId}/like")
+    public ResponseEntity<PostReadResponseDto> like(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long postId
+    ) {
+        Post post = postService.incrementLikesAndAddToUser(postId,jwt.getSubject());
         PostReadResponseDto dto = postMapper.toDto(post);
         return ResponseEntity.ok(dto);
     }
 
-    @PostMapping("/{id}/unlike")
-    public ResponseEntity<PostReadResponseDto> unlike(@PathVariable Long id) {
-        Post post = postService.decrementLikes(id);
-        PostReadResponseDto dto = postMapper.toDto(post);
-        return ResponseEntity.ok(dto);
-    }
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/bookmark")
     public ResponseEntity<Void> addBookmark(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {

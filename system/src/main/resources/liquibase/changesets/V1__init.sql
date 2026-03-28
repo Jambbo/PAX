@@ -143,6 +143,15 @@ CREATE TABLE IF NOT EXISTS users_bookmarks
     CONSTRAINT fk_users_bookmarks_posts FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS users_likedposts
+(
+    user_id VARCHAR(36) NOT NULL,
+    post_id BIGINT      NOT NULL,
+    PRIMARY KEY (user_id, post_id),
+    CONSTRAINT fk_users_likedposts_users FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_users_likedposts_posts FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS comments
 (
     id         BIGSERIAL PRIMARY KEY,
