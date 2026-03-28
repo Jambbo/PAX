@@ -22,6 +22,10 @@ public class OwnershipService implements SecurityService {
 
     }
 
+    public boolean isPostGroupOwner(Long postId) {
+        return postRepository.existsByIdAndGroupOwnerId(postId, getCurrentUserId());
+    }
+
     public boolean isGroupOwner(Long groupId){
         return groupRepository.existsByIdAndOwnerId(groupId, getCurrentUserId());
     }
