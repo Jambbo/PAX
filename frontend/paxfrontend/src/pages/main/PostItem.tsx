@@ -1,18 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; // ДОДАНО ІМПОРТ useNavigate
 import {
-    Heart,
-    Eye,
-    MessageSquare,
-    Bookmark,
-    Edit3,
-    Trash2,
-    Loader2,
-    Send,
-    ThumbsDown,
-    AlertTriangle,
-    X
-} from 'lucide-react';
+    Heart, Eye, MessageSquare, Bookmark, Edit3, Trash2, Loader2,
+    Send, ThumbsDown, AlertTriangle, X, CheckCircle, AlertCircle } from 'lucide-react';
 
 // ШЛЯХ ДО ТВІЙ AUTH MODAL (Уточни його, якщо він відрізняється)
 import { AuthModal } from '../../widgets/AuthModal/AuthModal';
@@ -39,6 +29,8 @@ interface PostItemProps {
     onDeleteClick: (postId: number) => void;
     onEditSave: (postId: number, newText: string) => Promise<void>;
     onImageClick: (imageUrl: string) => void;
+    isSaved?: boolean;
+    onSaveToggle?: (postId: number, e: React.MouseEvent) => void;
 }
 
 export const PostItem: React.FC<PostItemProps> = ({
@@ -50,9 +42,22 @@ export const PostItem: React.FC<PostItemProps> = ({
                                                       onLikeToggle,
                                                       onDeleteClick,
                                                       onEditSave,
-                                                      onImageClick
+                                                      onImageClick,
+                                                      isSaved,
+                                                      onSaveToggle
                                                   }) => {
-    const navigate = useNavigate(); // Ініціалізуємо навігацію
+    const navigate = useNavigate();
+
+    // === СТЕЙТ ДЛЯ TOAST (СПОconvertВІЩЕННЯ) ===
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    // Автоматичне зникнення через 3 секунди
+    useEffect(() => {
+        if (toast) {
+            const timer = setTimeout(() => setToast(null), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [toast]);
 
     // --- СТЕНИ ДЛЯ САМОГО ПОСТА ---
     const [isEditing, setIsEditing] = useState(false);
@@ -109,8 +114,23 @@ export const PostItem: React.FC<PostItemProps> = ({
     // Обгортка для збереження поста (щоб показати AuthModal)
     const handlePostSave = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (requireAuth("Authentication Required", "You need to log in to save posts.")) {
-            alert("Пост додано у збережені (заглушка)!");
+
+        const token = localStorage.getItem("access_token");
+
+        // Перевіряємо авторизацію
+        if (!token || token === "undefined") {
+            // ЯКЩО НЕ АВТОРИЗОВАНИЙ — ВІДКРИВАЄМО МОДАЛКУ
+            setIsAuthModalOpen(true);
+            return;
+        }
+
+        // Якщо авторизований — виконуємо збереження
+        if (onSaveToggle) {
+            onSaveToggle(post.id, e);
+            setToast({
+                message: isSaved ? "Removed from bookmarks" : "Added to bookmarks",
+                type: 'success'
+            });
         }
     };
 
@@ -355,6 +375,7 @@ export const PostItem: React.FC<PostItemProps> = ({
             </div>
 
             {/* Панель взаємодії */}
+            {/* Панель взаємодії */}
             <div className="flex items-center gap-6 pt-4 border-t border-gray-100 dark:border-gray-700 text-gray-500">
                 <button
                     onClick={handlePostLike}
@@ -375,13 +396,38 @@ export const PostItem: React.FC<PostItemProps> = ({
 
                 <button
                     onClick={handlePostSave}
-                    className={`flex items-center gap-2 transition-colors hover:text-${accentColor}-500`}
-                    title="Save"
+                    className={`flex items-center gap-2 transition-colors ${isSaved ? `text-${accentColor}-500` : `hover:text-${accentColor}-500`}`}
+                    title={isSaved ? "Remove Bookmark" : "Save"}
                 >
-                    <Bookmark size={18} />
+                    <Bookmark size={18} className={isSaved ? "fill-current" : ""} />
                 </button>
-            </div>
 
+                {/* === МОДАЛКА АВТОРИЗАЦІЇ === */}
+                <AuthModal
+                    isOpen={isAuthModalOpen}
+                    onClose={() => setIsAuthModalOpen(false)}
+                    title="Bookmark Post"
+                    message="You need to be logged in to save this post to your bookmarks."
+                />
+
+                {/* === СПЛИВАЮЧЕ ВІКНО (TOAST) === */}
+                {toast && (
+                    <div className={`fixed bottom-6 right-6 z-[999] flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl animate-fadeIn border ${
+                        toast.type === 'success'
+                            ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/90 dark:border-green-800 dark:text-green-300'
+                            : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/90 dark:border-red-800 dark:text-red-300'
+                    }`}>
+                        {toast.type === 'success' ? <CheckCircle size={24} /> : <AlertCircle size={24} />}
+                        <span className="font-semibold text-sm mr-2">{toast.message}</span>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setToast(null); }}
+                            className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg transition-colors"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                )}
+            </div>
             {/* СЕКЦІЯ КОМЕНТАРІВ */}
             {isCommentsOpen && (
                 <div className="pt-5 mt-5 border-t border-gray-200 dark:border-gray-700 animate-fadeIn" onClick={e => e.stopPropagation()}>

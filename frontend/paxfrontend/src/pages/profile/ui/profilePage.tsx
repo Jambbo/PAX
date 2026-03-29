@@ -8,7 +8,10 @@ import {
 
 // ПЕРЕВІР ЦІ ШЛЯХИ ДО СВОЇХ СЕРВІСІВ!
 import { fetchUserById } from '../userService';
-import { fetchAllPosts, deletePost, updatePost, likePost, unlikePost, Post } from '../../main/postServise';
+import {
+    fetchAllPosts, deletePost, updatePost, likePost, sortPosts, Post,
+    addBookmark, removeBookmark
+} from '../../main/postServise';
 
 // ШЛЯХ ДО НОВОГО КОМПОНЕНТА POST ITEM
 import { PostItem } from '../../main/PostItem';
@@ -59,8 +62,37 @@ export const ProfilePage: React.FC = () => {
     // Локальні лайки поточного користувача (щоб кнопочка "сердечко" світилась червоним)
     const [likedPosts, setLikedPosts] = useState<Set<number>>(() => {
         const saved = localStorage.getItem('pax_liked_posts');
-        return saved ? new Set(JSON.parse(saved)) : new Set();
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                // ФІЛЬТРУЄМО ЖОРСТКО: пропускаємо ТІЛЬКИ справжні числа!
+                const validIds = parsed.filter((id: any) => typeof id === 'number' && !isNaN(id));
+                return new Set<number>(validIds);
+            } catch (e) {
+                return new Set<number>();
+            }
+        }
+        return new Set<number>();
     });
+
+    // Стейт для збережених постів (закладок)
+    const [savedPosts, setSavedPosts] = useState<Set<number>>(() => {
+        const saved = localStorage.getItem('pax_saved_posts');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                const validIds = parsed.filter((id: any) => typeof id === 'number' && !isNaN(id));
+                return new Set<number>(validIds);
+            } catch (e) {
+                return new Set<number>();
+            }
+        }
+        return new Set<number>();
+    });
+
+    useEffect(() => {
+        localStorage.setItem('pax_saved_posts', JSON.stringify(Array.from(savedPosts)));
+    }, [savedPosts]);
 
     useEffect(() => {
         localStorage.setItem('pax_liked_posts', JSON.stringify(Array.from(likedPosts)));
@@ -137,9 +169,9 @@ export const ProfilePage: React.FC = () => {
                 const fetchedAllPosts = await fetchAllPosts().catch(() => []);
 
                 if (userData) {
-                    // Власні пости
+                    // Власні пости (СОРТУЄМО ПО ДАТІ)
                     const userPosts = fetchedAllPosts.filter(p => String(p.authorId) === String(userData.id));
-                    setPosts(userPosts.reverse());
+                    setPosts(sortPosts(userPosts, 'date'));
 
                     // --- НОВЕ: Завантажуємо пости, які лайкнув саме ВЛАСНИК ПРОФІЛЮ ---
                     try {
@@ -151,12 +183,13 @@ export const ProfilePage: React.FC = () => {
 
                         if (likesRes.ok) {
                             const likedData = await likesRes.json();
-                            setProfileLikedPosts(likedData.reverse());
+                            // СОРТУЄМО ЛАЙКНУТІ ПОСТИ
+                            setProfileLikedPosts(sortPosts(likedData, 'date'));
                         } else {
                             // FALLBACK: Якщо ендпоінту на бекенді ще немає, а профіль мій - показуємо з локал сторедж
                             if (String(userData.id) === String(currentUserId) || myId === profileId || profileId === 'me') {
                                 const myLocalLikes = fetchedAllPosts.filter(p => likedPosts.has(p.id));
-                                setProfileLikedPosts(myLocalLikes.reverse());
+                                setProfileLikedPosts(sortPosts(myLocalLikes, 'date'));
                             } else {
                                 setProfileLikedPosts([]);
                             }
@@ -165,7 +198,7 @@ export const ProfilePage: React.FC = () => {
                         // FALLBACK на випадок помилки мережі
                         if (String(userData.id) === String(currentUserId) || myId === profileId || profileId === 'me') {
                             const myLocalLikes = fetchedAllPosts.filter(p => likedPosts.has(p.id));
-                            setProfileLikedPosts(myLocalLikes.reverse());
+                            setProfileLikedPosts(sortPosts(myLocalLikes, 'date'));
                         } else {
                             setProfileLikedPosts([]);
                         }
@@ -185,8 +218,11 @@ export const ProfilePage: React.FC = () => {
     const isOwner = currentUserId !== null && user !== null && String(user.id) === String(currentUserId);
 
     // === ЛОГІКА ПОСТІВ ===
+
+    // 1. Окремий обробник для лайків
     const handleLike = async (postId: number, e: React.MouseEvent) => {
         e.stopPropagation();
+
         const token = localStorage.getItem("access_token");
         if (!token || token === "undefined") {
             alert("Please log in to like posts.");
@@ -194,32 +230,54 @@ export const ProfilePage: React.FC = () => {
         }
 
         const isLiked = likedPosts.has(postId);
-        try {
-            let updatedPost;
-            if (isLiked) {
-                updatedPost = await unlikePost(postId);
-                setLikedPosts(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(postId);
-                    return newSet;
-                });
-                // Якщо це мій профіль, забираємо пост із вкладки Likes
-                if (isOwner) {
-                    setProfileLikedPosts(prev => prev.filter(p => p.id !== postId));
-                }
-            } else {
-                updatedPost = await likePost(postId);
-                setLikedPosts(prev => new Set(prev).add(postId));
-                // Якщо це мій профіль, додаємо пост у вкладку Likes
-                if (isOwner) {
-                    setProfileLikedPosts(prev => [updatedPost, ...prev]);
-                }
-            }
+        const postToUpdate = posts.find(p => p.id === postId) || profileLikedPosts.find(p => p.id === postId);
+        if (!postToUpdate) return;
 
-            // Оновлюємо пост у головній стрічці
-            setPosts(posts.map(p => p.id === postId ? updatedPost : p));
+        // Оптимістичний UI для лайків
+        if (isLiked) {
+            setLikedPosts(prev => {
+                const next = new Set(prev);
+                next.delete(postId);
+                return next;
+            });
+            setPosts(posts.map(p => p.id === postId ? { ...p, likes: Math.max(0, p.likes - 1) } : p));
+            setProfileLikedPosts(profileLikedPosts.map(p => p.id === postId ? { ...p, likes: Math.max(0, p.likes - 1) } : p));
+        } else {
+            setLikedPosts(prev => new Set(prev).add(postId));
+            setPosts(posts.map(p => p.id === postId ? { ...p, likes: p.likes + 1 } : p));
+            setProfileLikedPosts(profileLikedPosts.map(p => p.id === postId ? { ...p, likes: p.likes + 1 } : p));
+        }
+
+        try {
+            await likePost(postId);
         } catch (err) {
-            console.error("Помилка роботи з лайком", err);
+            console.error("Помилка лайку", err);
+        }
+    };
+
+    // 2. Окремий обробник для закладок (ВИГНАННИЙ З handleLike)
+    const handleSaveToggle = async (postId: number, e: React.MouseEvent) => {
+        e.stopPropagation();
+
+        const token = localStorage.getItem("access_token");
+        if (!token || token === "undefined") {
+            alert("Please log in to save posts.");
+            return;
+        }
+
+        const isSaved = savedPosts.has(postId);
+
+        // Оптимістичний UI для закладок
+        if (isSaved) {
+            setSavedPosts(prev => {
+                const next = new Set(prev);
+                next.delete(postId);
+                return next;
+            });
+            try { await removeBookmark(postId); } catch (err) { console.error(err); }
+        } else {
+            setSavedPosts(prev => new Set(prev).add(postId));
+            try { await addBookmark(postId); } catch (err) { console.error(err); }
         }
     };
 
@@ -401,8 +459,10 @@ export const ProfilePage: React.FC = () => {
                                         currentUserId={currentUserId}
                                         isPageOwner={isOwner}
                                         accentColor={accentColor}
-                                        isLiked={likedPosts.has(post.id)}
+                                        isLiked={currentUserId !== null && likedPosts.has(post.id)}
                                         onLikeToggle={handleLike}
+                                        isSaved={currentUserId !== null && savedPosts.has(post.id)}
+                                        onSaveToggle={handleSaveToggle}
                                         onDeleteClick={(id) => setPostToDeleteId(id)}
                                         onEditSave={handleSaveEdit}
                                         onImageClick={(url) => setSelectedImage(url)}
@@ -429,8 +489,10 @@ export const ProfilePage: React.FC = () => {
                                         currentUserId={currentUserId}
                                         isPageOwner={isOwner}
                                         accentColor={accentColor}
-                                        isLiked={likedPosts.has(post.id)}
+                                        isLiked={currentUserId !== null && likedPosts.has(post.id)}
                                         onLikeToggle={handleLike}
+                                        isSaved={currentUserId !== null && savedPosts.has(post.id)}
+                                        onSaveToggle={handleSaveToggle}
                                         onDeleteClick={(id) => setPostToDeleteId(id)}
                                         onEditSave={handleSaveEdit}
                                         onImageClick={(url) => setSelectedImage(url)}
@@ -459,6 +521,8 @@ export const ProfilePage: React.FC = () => {
                                         accentColor={accentColor}
                                         isLiked={likedPosts.has(post.id)} // Перевіряємо, чи Я лайкнув цей пост
                                         onLikeToggle={handleLike}
+                                        isSaved={currentUserId !== null && savedPosts.has(post.id)}
+                                        onSaveToggle={handleSaveToggle}
                                         onDeleteClick={(id) => setPostToDeleteId(id)}
                                         onEditSave={handleSaveEdit}
                                         onImageClick={(url) => setSelectedImage(url)}
