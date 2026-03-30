@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.parameters.P;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -48,11 +49,19 @@ public class UserController {
         return ResponseEntity.ok(dto);
     }
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/likedPosts")
-    public ResponseEntity<List<PostReadResponseDto>> getLikedPosts(
+    public ResponseEntity<List<PostReadResponseDto>> getMyLikedPosts(
             @AuthenticationPrincipal Jwt jwt
     ) {
         List<Post> likedPostsByUserId = userService.getLikedPostsByUserId(jwt.getSubject());
+        List<PostReadResponseDto> likedPostsDto = postMapper.toDto(likedPostsByUserId);
+        return ResponseEntity.ok(likedPostsDto);
+    }
+
+    @GetMapping("/{userId}/likedPosts")
+    public ResponseEntity<List<PostReadResponseDto>> getLikedPostsByUserId(@PathVariable("userId") String userId){
+        List<Post> likedPostsByUserId = userService.getLikedPostsByUserId(userId);
         List<PostReadResponseDto> likedPostsDto = postMapper.toDto(likedPostsByUserId);
         return ResponseEntity.ok(likedPostsDto);
     }

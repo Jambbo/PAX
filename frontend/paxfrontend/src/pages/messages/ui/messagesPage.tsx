@@ -15,6 +15,17 @@ interface ChatMessage {
     createdAt?: string;
 }
 
+// Масив з популярними емодзі (понад 60 штук)
+const EMOJIS = [
+    "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "🥲", "☺️",
+    "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗",
+    "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🥸",
+    "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️",
+    "🥺", "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵",
+    "🥶", "😱", "😨", "😰", "😥", "😓", "🤗", "🤔", "🫣", "🤭",
+    "👍", "👎", "✌️", "🤞", "🫶", "❤️", "🔥", "✨", "🎉", "💯"
+];
+
 export const MessagesPage: React.FC = () => {
     // =========================================================================
     // UI СТЕЙТИ ТА ЛОГІКА ДИЗАЙНУ
@@ -22,6 +33,10 @@ export const MessagesPage: React.FC = () => {
     const [accentColor, setAccentColor] = useState(() => localStorage.getItem('site_accent_color') || 'purple');
     const [searchQuery, setSearchQuery] = useState("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Стейт та реф для меню емодзі
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const emojiContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handleStorageChange = () => setAccentColor(localStorage.getItem('site_accent_color') || 'purple');
@@ -33,12 +48,23 @@ export const MessagesPage: React.FC = () => {
         };
     }, []);
 
+    // Закриття меню емодзі при кліку поза ним
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (emojiContainerRef.current && !emojiContainerRef.current.contains(event.target as Node)) {
+                setShowEmojiPicker(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
     // =========================================================================
-    // ОРИГІНАЛЬНА ЛОГІКА (БЕЗ ЗМІН)
+    // ОРИГІНАЛЬНА ЛОГІКА
     // =========================================================================
     const [users, setUsers] = useState<User[]>([]);
     const [conversationUsers, setConversationUsers] = useState<User[]>([]);
@@ -54,7 +80,6 @@ export const MessagesPage: React.FC = () => {
     const [client, setClient] = useState<Client | null>(null);
     const [currentUserId, setCurrentUserId] = useState<string>("");
 
-    // userId -> conversationId
     const [conversationMap, setConversationMap] = useState<Record<string, string>>({});
 
     const getUserIdFromToken = () => {
@@ -79,8 +104,8 @@ export const MessagesPage: React.FC = () => {
                     const newConvMap: Record<string, string> = {};
 
                     data.forEach(conv => {
-                        const otherUser = Array.isArray(conv.members) 
-                            ? conv.members.find((p: any) => p.id !== userId) 
+                        const otherUser = Array.isArray(conv.members)
+                            ? conv.members.find((p: any) => p.id !== userId)
                             : null;
 
                         if (otherUser) {
@@ -93,7 +118,7 @@ export const MessagesPage: React.FC = () => {
                             newConvMap[otherUser.id] = conv.id;
                         }
                     });
-                    
+
                     setConversationUsers(loadedUsers);
                     setConversationMap(prev => ({ ...prev, ...newConvMap }));
                 }
@@ -101,12 +126,10 @@ export const MessagesPage: React.FC = () => {
             .catch(err => console.error("Error fetching conversations:", err));
     };
 
-    // fetch existing conversations
     useEffect(() => {
         if (currentUserId) fetchConversations(currentUserId);
     }, [currentUserId]);
 
-    // websocket connect
     useEffect(() => {
         const token = localStorage.getItem("access_token")!;
         const userId = getUserIdFromToken();
@@ -142,7 +165,7 @@ export const MessagesPage: React.FC = () => {
                         const isKnown = Object.values(prev).includes(body.conversationId);
                         if (!isKnown) {
                             setTimeout(() => fetchConversations(userId), 100);
-                            
+
                             if (selectedUserRef.current && !prev[selectedUserRef.current.id]) {
                                 return { ...prev, [selectedUserRef.current.id]: body.conversationId };
                             }
@@ -159,8 +182,6 @@ export const MessagesPage: React.FC = () => {
         return () => stompClient.deactivate();
     }, []);
 
-
-    // load users
     useEffect(() => {
         if (!searchQuery.trim()) {
             setUsers([]);
@@ -194,11 +215,11 @@ export const MessagesPage: React.FC = () => {
         });
 
         setInput("");
+        setShowEmojiPicker(false); // Закриваємо емодзі після відправки
     };
 
     const activeConversationId = selectedUser ? conversationMap[selectedUser.id] : null;
 
-    // fetch message history for the active conversation
     useEffect(() => {
         if (!activeConversationId) return;
 
@@ -209,7 +230,6 @@ export const MessagesPage: React.FC = () => {
         })
             .then(res => res.json())
             .then(data => {
-                // Spring Data Rest usually puts the list in `content`
                 if (data && Array.isArray(data.content)) {
                     const history = data.content.map((m: any) => ({
                         id: m.id,
@@ -227,7 +247,6 @@ export const MessagesPage: React.FC = () => {
                             }
                         });
 
-                        // Sort chronologically
                         return newMessages.sort((a, b) => {
                             const timeA = a.createdAt ? new Date(a.createdAt).getTime() : Number.MAX_SAFE_INTEGER;
                             const timeB = b.createdAt ? new Date(b.createdAt).getTime() : Number.MAX_SAFE_INTEGER;
@@ -247,7 +266,6 @@ export const MessagesPage: React.FC = () => {
         scrollToBottom();
     }, [filteredMessages, selectedUser]);
 
-    // Відображаємо користувачів з бекенду
     const displayedUsers = users;
 
     const allSidebarUsers = [...conversationUsers];
@@ -255,20 +273,15 @@ export const MessagesPage: React.FC = () => {
         allSidebarUsers.unshift(selectedUser);
     }
 
-    // =========================================================================
-    // НОВИЙ ІНТЕРФЕЙС
-    // =========================================================================
     return (
         <div className="max-w-6xl mx-auto h-[calc(100vh-8rem)] min-h-[600px] flex bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm overflow-hidden animate-fadeIn">
 
-            {/* ================= ЛІВА ПАНЕЛЬ (СПИСОК КОНТАКТІВ) ================= */}
+            {/* ================= ЛІВА ПАНЕЛЬ ================= */}
             <div className="w-full md:w-80 lg:w-96 flex flex-col border-r border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
-                {/* Хедер лівої панелі */}
                 <div className="h-16 px-4 flex items-center border-b border-gray-200 dark:border-gray-800 shrink-0">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white flex-1">Messages</h2>
                 </div>
 
-                {/* Пошук */}
                 <div className="p-3 relative z-20">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -280,7 +293,6 @@ export const MessagesPage: React.FC = () => {
                             className={`w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-${accentColor}-500 transition-shadow shadow-sm`}
                         />
                     </div>
-                    {/* Search Dropdown */}
                     {searchQuery.trim() !== "" && (
                         <div className="absolute top-full left-3 right-3 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg max-h-64 overflow-y-auto no-scrollbar z-50">
                             {displayedUsers.length === 0 ? (
@@ -291,7 +303,7 @@ export const MessagesPage: React.FC = () => {
                                         key={user.id}
                                         onClick={() => {
                                             setSelectedUser(user);
-                                            setSearchQuery(""); // Clear search on select
+                                            setSearchQuery("");
                                         }}
                                         className="flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0"
                                     >
@@ -310,7 +322,6 @@ export const MessagesPage: React.FC = () => {
                     )}
                 </div>
 
-                {/* Список користувачів */}
                 <div className="flex-1 overflow-y-auto no-scrollbar p-2 space-y-1">
                     {allSidebarUsers.length > 0 ? (
                         allSidebarUsers.map((user) => {
@@ -356,7 +367,6 @@ export const MessagesPage: React.FC = () => {
             {/* ================= ПРАВА ПАНЕЛЬ (ЧАТ) ================= */}
             <div className="flex-1 flex flex-col bg-white dark:bg-gray-900 relative">
                 {!selectedUser ? (
-                    // Порожній стан
                     <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-600 bg-gray-50/30 dark:bg-gray-900/30">
                         <div className={`w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4`}>
                             <MessageSquare size={32} />
@@ -364,9 +374,7 @@ export const MessagesPage: React.FC = () => {
                         <p className="text-lg font-medium text-gray-600 dark:text-gray-400">Select a user to start messaging</p>
                     </div>
                 ) : (
-                    // Активний чат
                     <>
-                        {/* Хедер чату */}
                         <div className="h-16 px-6 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md z-10 shrink-0">
                             <div className="flex items-center gap-3">
                                 <div className={`w-10 h-10 rounded-full bg-${accentColor}-100 dark:bg-${accentColor}-900/30 text-${accentColor}-600 flex items-center justify-center font-bold text-lg`}>
@@ -389,7 +397,6 @@ export const MessagesPage: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Зона повідомлень */}
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-gray-50 dark:bg-gray-900/50">
                             {filteredMessages.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center text-gray-400">
@@ -404,8 +411,8 @@ export const MessagesPage: React.FC = () => {
                                             <div
                                                 className={`px-4 py-2.5 max-w-[75%] lg:max-w-[60%] text-[15px] shadow-sm flex flex-col gap-1 ${
                                                     isMine
-                                                        ? `bg-${accentColor}-600 text-white rounded-2xl rounded-tr-sm` // Стиль відправника
-                                                        : "bg-white border border-gray-100 dark:border-gray-800 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-tl-sm" // Стиль отримувача
+                                                        ? `bg-${accentColor}-600 text-white rounded-2xl rounded-tr-sm`
+                                                        : "bg-white border border-gray-100 dark:border-gray-800 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl rounded-tl-sm"
                                                 }`}
                                             >
                                                 <span className="leading-relaxed whitespace-pre-wrap word-break-words break-words">{msg.content}</span>
@@ -420,9 +427,28 @@ export const MessagesPage: React.FC = () => {
                             <div ref={messagesEndRef} />
                         </div>
 
-                        {/* Поле вводу */}
-                        <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shrink-0">
+                        {/* ================= ПОЛЕ ВВОДУ З ЕМОДЗІ ================= */}
+                        <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shrink-0" ref={emojiContainerRef}>
                             <div className="flex items-end gap-2 max-w-4xl mx-auto relative">
+
+                                {/* ПАНЕЛЬ ЕМОДЗІ */}
+                                {showEmojiPicker && (
+                                    <div className="absolute bottom-full right-16 mb-2 w-72 sm:w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl p-3 z-50 animate-fadeIn">
+                                        <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 pr-1">
+                                            {EMOJIS.map((emoji, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => setInput(prev => prev + emoji)}
+                                                    className="text-2xl hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl p-1.5 transition-colors flex items-center justify-center"
+                                                >
+                                                    {emoji}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 <button className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shrink-0">
                                     <Paperclip size={22} />
                                 </button>
@@ -432,7 +458,7 @@ export const MessagesPage: React.FC = () => {
                                         value={input}
                                         onChange={(e) => setInput(e.target.value)}
                                         placeholder="Type message..."
-                                        className="w-full bg-transparent px-4 py-3 text-[15px] text-gray-900 dark:text-white outline-none resize-none max-h-32 min-h-[48px] placeholder-gray-500"
+                                        className="w-full bg-transparent pl-4 pr-12 py-3 text-[15px] text-gray-900 dark:text-white outline-none resize-none max-h-32 min-h-[48px] placeholder-gray-500"
                                         rows={1}
                                         onKeyDown={(e) => {
                                             if (e.key === "Enter" && !e.shiftKey) {
@@ -446,7 +472,11 @@ export const MessagesPage: React.FC = () => {
                                             target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
                                         }}
                                     />
-                                    <button className="p-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shrink-0 absolute right-0 bottom-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                        className={`p-3 transition-colors shrink-0 absolute right-0 bottom-0 ${showEmojiPicker ? `text-${accentColor}-500` : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                    >
                                         <Smile size={22} />
                                     </button>
                                 </div>

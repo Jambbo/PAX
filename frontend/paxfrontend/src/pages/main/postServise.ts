@@ -86,9 +86,27 @@ export async function createPost(data: CreatePostDto): Promise<Post> {
         throw new Error("Не вдалося створити пост");
     }
 
-    return response.json();
-}
+    let newPost = await response.json();
 
+    if (!newPost.id) {
+        try {
+            const allPostsRes = await fetch(`${API_URL}/all?t=${Date.now()}`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            if (allPostsRes.ok) {
+                const allPosts = await allPostsRes.json();
+                const matchedPost = allPosts.find((p: any) => p.text === data.text);
+                if (matchedPost && matchedPost.id) {
+                    newPost = matchedPost; // Підміняємо на пост зі справжнім ID
+                }
+            }
+        } catch (e) {
+            console.error("Не вдалося витягнути ID для нового поста", e);
+        }
+    }
+
+    return newPost;
+}
 export async function deletePost(postId: number): Promise<void> {
     const token = localStorage.getItem("access_token");
     const response = await fetch(`http://localhost:8081/api/v1/posts/${postId}`, {
@@ -102,28 +120,24 @@ export async function deletePost(postId: number): Promise<void> {
         throw new Error("Не вдалося видалити пост");
     }
 }
+// Це тепер наш єдиний перемикач (Toggle) для лайків і анлайків
 export async function likePost(postId: number): Promise<Post> {
     const token = localStorage.getItem("access_token");
     const headers: HeadersInit = {
-        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-        "Content-Type": "application/json"
+        ...(token ? { "Authorization": `Bearer ${token}` } : {})
     };
 
-    // Викликаємо твій PostController: @PostMapping("/{id}/like")
-    const response = await fetch(`${API_URL}/${postId}/like`, { method: "POST", headers });
+    const response = await fetch(`${API_URL}/${postId}/like`, {
+        method: "POST",
+        headers
+    });
 
     if (!response.ok) {
-        throw new Error("Не вдалося лайкнути пост");
+        throw new Error("Не вдалося змінити статус лайку");
     }
 
-    return response.json(); // Повертає оновлений пост із новими лайками
-}
-
-// Створюємо окремий інтерфейс для оновлення
-export interface UpdatePostDto {
-    id: number;       // Додаємо id, який часто вимагає Spring Boot
-    text: string;
-    groupId?: number; // Робимо не обов'язковим
+    const text = await response.text();
+    return text ? JSON.parse(text) : { id: postId };
 }
 
 // === ФУНКЦІЯ ОНОВЛЕННЯ (РЕДАГУВАННЯ) ПОСТА ===
@@ -150,25 +164,6 @@ export async function updatePost(postId: number, data: UpdatePostDto): Promise<P
     return response.json();
 }
 
-export async function unlikePost(postId: number): Promise<Post> {
-    const token = localStorage.getItem("access_token");
-    const headers: HeadersInit = {
-        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-        "Content-Type": "application/json"
-    };
-
-    // Викликаємо твій PostController: @PostMapping("/{id}/unlike")
-    const response = await fetch(`${API_URL}/${postId}/unlike`, { method: "POST", headers });
-
-    if (!response.ok) {
-        throw new Error("Не вдалося прибрати лайк");
-    }
-
-    return response.json();
-}
-// ==========================================
-// ЛОГІКА КОМЕНТАРІВ (COMMENTS)
-// ==========================================
 
 export interface Comment {
     id: number;
@@ -294,3 +289,74 @@ export async function removeCommentInteraction(postId: number, commentId: number
     if (!response.ok) throw new Error("Failed to remove interaction");
     return response.json();
 }
+
+export type PostSortType = 'date' | 'likes';
+
+export function sortPosts(posts: Post[], sortBy: PostSortType = 'date'): Post[] {
+    return [...posts].sort((a, b) => {
+        if (sortBy === 'likes') {
+            // Сортування за лайками (найбільше -> найменше)
+            return (b.likes || 0) - (a.likes || 0);
+        }
+
+        // Сортування за датою за замовчуванням (найновіші -> найстаріші)
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateB - dateA;
+    });
+}
+
+export async function addBookmark(postId: number): Promise<void> {
+    const token = localStorage.getItem("access_token");
+    if (!token || token === "undefined") throw new Error("Unauthorized");
+
+    const response = await fetch(`${API_URL}/${postId}/bookmark`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+
+    if (!response.ok) throw new Error("Failed to add bookmark");
+}
+
+export async function removeBookmark(postId: number): Promise<void> {
+    const token = localStorage.getItem("access_token");
+    if (!token || token === "undefined") throw new Error("Unauthorized");
+
+    const response = await fetch(`${API_URL}/${postId}/bookmark`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+    });
+
+    if (!response.ok) throw new Error("Failed to remove bookmark");
+}
+
+export async function fetchBookmarks(): Promise<Post[]> {
+    const token = localStorage.getItem("access_token");
+    if (!token || token === "undefined") return []; // Гостям закладки недоступні
+
+    const response = await fetch(`${API_URL}/bookmarks`, {
+        method: "GET",
+        headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+        }
+    });
+
+    if (!response.ok) throw new Error("Failed to fetch bookmarks");
+    return response.json();
+}
+
+const handleSaveToggle = async (postId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const isSaved = savedPosts.has(postId);
+
+    if (isSaved) {
+        setSavedPosts(prev => { const next = new Set(prev); next.delete(postId); return next; });
+        try { await removeBookmark(postId); } catch (err) {}
+    } else {
+        setSavedPosts(prev => new Set(prev).add(postId));
+        try { await addBookmark(postId); } catch (err) {}
+    }
+
+    localStorage.setItem('pax_saved_posts', JSON.stringify(Array.from(savedPosts)));
+};

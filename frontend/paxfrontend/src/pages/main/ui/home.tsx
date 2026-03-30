@@ -12,8 +12,10 @@ import {
 } from 'lucide-react';
 
 // ІМПОРТИ СЕРВІСІВ (Переконайся, що шляхи правильні)
-import {fetchAllPosts, createPost, deletePost, likePost, updatePost, unlikePost, Post} from '../postServise';
+import {fetchAllPosts, createPost, deletePost, likePost, updatePost, sortPosts, unlikePost, addBookmark,
+    removeBookmark, Post} from '../postServise';
 import {fetchUsersCount, Group, fetchMyGroups} from '../../groups/groupsService';
+
 
 // ШЛЯХ ДО НОВОГО КОМПОНЕНТА POST ITEM (Перевір, чи правильний імпорт!)
 import { PostItem } from '../PostItem';
@@ -121,8 +123,36 @@ export const Home: React.FC = () => {
     // --- 6. СТЕЙТ ДЛЯ ЛАЙКІВ (ЗБЕРЕЖЕННЯ В LOCALSTORAGE) ---
     const [likedPosts, setLikedPosts] = useState<Set<number>>(() => {
         const saved = localStorage.getItem('pax_liked_posts');
-        return saved ? new Set(JSON.parse(saved)) : new Set();
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                // ФІЛЬТРУЄМО ЖОРСТКО: пропускаємо ТІЛЬКИ справжні числа!
+                const validIds = parsed.filter((id: any) => typeof id === 'number' && !isNaN(id));
+                return new Set<number>(validIds);
+            } catch (e) {
+                return new Set<number>();
+            }
+        }
+        return new Set<number>();
     });
+    // Стейт для збережених постів (закладок)
+    const [savedPosts, setSavedPosts] = useState<Set<number>>(() => {
+        const saved = localStorage.getItem('pax_saved_posts');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                const validIds = parsed.filter((id: any) => typeof id === 'number' && !isNaN(id));
+                return new Set<number>(validIds);
+            } catch (e) {
+                return new Set<number>();
+            }
+        }
+        return new Set<number>();
+    });
+
+    useEffect(() => {
+        localStorage.setItem('pax_saved_posts', JSON.stringify(Array.from(savedPosts)));
+    }, [savedPosts]);
 
     useEffect(() => {
         // Оновлюємо localStorage щоразу, коли змінюється набір лайків
@@ -161,7 +191,7 @@ export const Home: React.FC = () => {
             setError(null);
             try {
                 const data = await fetchAllPosts();
-                setPosts([...data].reverse()); // Нові пости зверху
+                setPosts(sortPosts(data, 'date'));
             } catch (err: any) {
                 console.error("Помилка завантаження постів:", err);
                 setError("Не вдалося завантажити останні обговорення.");
@@ -212,32 +242,72 @@ export const Home: React.FC = () => {
 
     // ЛАЙК ТА ЗНЯТТЯ ЛАЙКУ (UNLIKE)
     const handleLike = async (postId: number, e: React.MouseEvent) => {
-        e.stopPropagation(); // Важливо: зупиняємо клік, щоб пост не згортався/розгортався
+        e.stopPropagation();
 
-        if (!isLoggedIn) return alert("Будь ласка, авторизуйтеся, щоб ставити лайки!");
+        const token = localStorage.getItem("access_token");
+        if (!token || token === "undefined") {
+            alert("Please log in to like posts.");
+            return;
+        }
 
         const isLiked = likedPosts.has(postId);
+        const postToUpdate = posts.find(p => p.id === postId);
+        if (!postToUpdate) return;
 
-        try {
-            let updatedPost;
-            if (isLiked) {
-                // Якщо вже лайкнуто -> забираємо лайк
-                updatedPost = await unlikePost(postId);
-                setLikedPosts(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(postId);
-                    return newSet;
-                });
-            } else {
-                // Якщо ще не лайкнуто -> ставимо лайк
-                updatedPost = await likePost(postId);
-                setLikedPosts(prev => new Set(prev).add(postId));
+        // 1. МИТТЄВА ВІЗУАЛЬНА ЗМІНА (Оптимістичний UI)
+        if (isLiked) {
+            // Візуально забираємо лайк
+            setLikedPosts(prev => {
+                const next = new Set(prev);
+                next.delete(postId);
+                return next;
+            });
+            setPosts(posts.map(p => p.id === postId ? { ...p, likes: Math.max(0, p.likes - 1) } : p));
+
+            if (typeof setProfileLikedPosts !== 'undefined') {
+                setProfileLikedPosts(prev => prev.filter(p => p.id !== postId));
             }
+        } else {
+            // Візуально ставимо лайк
+            setLikedPosts(prev => new Set(prev).add(postId));
+            setPosts(posts.map(p => p.id === postId ? { ...p, likes: p.likes + 1 } : p));
 
-            // Оновлюємо конкретний пост у загальній стрічці
-            setPosts(posts.map(p => p.id === postId ? updatedPost : p));
+            if (typeof setProfileLikedPosts !== 'undefined') {
+                setProfileLikedPosts(prev => [{ ...postToUpdate, likes: postToUpdate.likes + 1 }, ...prev]);
+            }
+        }
+
+        // 2. ВІДПРАВЛЯЄМО ЄДИНИЙ ЗАПИТ НА БЕКЕНД
+        try {
+            // Ми завжди викликаємо likePost, бо бекенд сам знає, що це Toggle (перемикач)
+            const updatedPostFromServer = await likePost(postId);
+
+            // Опціонально: оновлюємо пост реальними даними з сервера, щоб цифри 100% збігалися
+            if (updatedPostFromServer && updatedPostFromServer.id) {
+                setPosts(prev => prev.map(p => p.id === postId ? updatedPostFromServer : p));
+            }
         } catch (err) {
-            console.error("Помилка роботи з лайком", err);
+            console.error("Помилка при зміні лайку на сервері", err);
+        }
+    };
+    const handleSaveToggle = async (postId: number, e: React.MouseEvent) => {
+        e.stopPropagation();
+
+        const token = localStorage.getItem("access_token");
+        if (!token || token === "undefined") {
+            alert("Please log in to save posts.");
+            return;
+        }
+
+        const isSaved = savedPosts.has(postId);
+
+        // Візуально миттєво додаємо або забираємо прапорець (Оптимістичний UI)
+        if (isSaved) {
+            setSavedPosts(prev => { const next = new Set(prev); next.delete(postId); return next; });
+            try { await removeBookmark(postId); } catch (err) { console.error("Помилка видалення закладки"); }
+        } else {
+            setSavedPosts(prev => new Set(prev).add(postId));
+            try { await addBookmark(postId); } catch (err) { console.error("Помилка додавання закладки"); }
         }
     };
 
@@ -469,12 +539,16 @@ export const Home: React.FC = () => {
                                 )}
 
                                 <PostItem
+                                    key={post.id}
                                     post={post}
                                     currentUserId={currentUserId}
-                                    isPageOwner={false} // На головній сторінці немає власника "всього", тільки автори керують своїми постами
+                                    // Замість isOwner перевіряємо, чи є юзер автором цього поста
+                                    isPageOwner={currentUserId !== null && String(post.authorId) === String(currentUserId)}
                                     accentColor={accentColor}
-                                    isLiked={isLiked}
+                                    isLiked={currentUserId !== null && likedPosts.has(post.id)}
                                     onLikeToggle={handleLike}
+                                    isSaved={currentUserId !== null && savedPosts.has(post.id)}
+                                    onSaveToggle={handleSaveToggle}
                                     onDeleteClick={(id) => setPostToDeleteId(id)}
                                     onEditSave={handleSaveEdit}
                                     onImageClick={(url) => setSelectedImage(url)}
