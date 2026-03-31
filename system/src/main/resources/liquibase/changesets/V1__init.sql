@@ -155,8 +155,8 @@ CREATE TABLE IF NOT EXISTS users_likedposts
 CREATE TABLE IF NOT EXISTS comments
 (
     id         BIGSERIAL PRIMARY KEY,
-    post_id    BIGINT       NOT NULL,
-    author_id  VARCHAR(36)  NOT NULL,
+    post_id    BIGINT        NOT NULL,
+    author_id  VARCHAR(36)   NOT NULL,
     content    VARCHAR(1000) NOT NULL,
     likes      BIGINT    DEFAULT 0,
     dislikes   BIGINT    DEFAULT 0,
@@ -175,4 +175,17 @@ CREATE TABLE IF NOT EXISTS comment_likes
     PRIMARY KEY (comment_id, user_id),
     CONSTRAINT fk_comment_likes_comments FOREIGN KEY (comment_id) REFERENCES comments (id) ON DELETE CASCADE,
     CONSTRAINT fk_comment_likes_users FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS notifications
+(
+    id           BIGSERIAL PRIMARY KEY,
+    recipient_id VARCHAR(36)  NOT NULL,
+    sender_id    VARCHAR(36),
+    type         VARCHAR(255) NOT NULL,
+    status       VARCHAR(255) NOT NULL,
+    reference_id VARCHAR(36),
+    created_at   TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_notification_recipient FOREIGN KEY (recipient_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_notification_sender FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE SET NULL
 );
