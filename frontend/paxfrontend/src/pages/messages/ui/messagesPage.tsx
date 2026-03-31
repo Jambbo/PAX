@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Client } from "@stomp/stompjs";
 import { Send, Search, MoreVertical, Phone, Video, Paperclip, Smile, MessageSquare } from "lucide-react";
 
@@ -27,6 +28,7 @@ const EMOJIS = [
 ];
 
 export const MessagesPage: React.FC = () => {
+    const navigate = useNavigate();
     // =========================================================================
     // UI СТЕЙТИ ТА ЛОГІКА ДИЗАЙНУ
     // =========================================================================
@@ -376,7 +378,10 @@ export const MessagesPage: React.FC = () => {
                 ) : (
                     <>
                         <div className="h-16 px-6 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md z-10 shrink-0">
-                            <div className="flex items-center gap-3">
+                            <div 
+                                className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => navigate(`/profile/${selectedUser.id}`)}
+                            >
                                 <div className={`w-10 h-10 rounded-full bg-${accentColor}-100 dark:bg-${accentColor}-900/30 text-${accentColor}-600 flex items-center justify-center font-bold text-lg`}>
                                     {selectedUser.username ? selectedUser.username.charAt(0).toUpperCase() : '?'}
                                 </div>

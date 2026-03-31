@@ -1,46 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, {useState, useEffect} from 'react';
+import {useParams, Link} from 'react-router-dom';
 import {
     User, Mail, MapPin, Calendar, Link as LinkIcon, Edit3, Settings,
     Camera, Heart, MessageSquare, Eye, Bookmark, Users, Award, TrendingUp,
     Globe, Hash, Loader2, Trash2, AlertTriangle, X, Image as ImageIcon
 } from 'lucide-react';
 
-// ПЕРЕВІР ЦІ ШЛЯХИ ДО СВОЇХ СЕРВІСІВ!
-import { fetchUserById } from '../userService';
+import {fetchUserById} from '../userService';
 import {
     fetchAllPosts, deletePost, updatePost, likePost, sortPosts, Post,
     addBookmark, removeBookmark
 } from '../../main/postServise';
 
-// ШЛЯХ ДО НОВОГО КОМПОНЕНТА POST ITEM
-import { PostItem } from '../../main/PostItem';
+import {PostItem} from '../../main/PostItem';
 
-// --- Модалка для перегляду фото ---
 interface ImageModalProps {
     imageUrl: string;
     onClose: () => void;
 }
-const ImageModal: React.FC<ImageModalProps> = ({ imageUrl, onClose }) => {
+
+const ImageModal: React.FC<ImageModalProps> = ({imageUrl, onClose}) => {
     useEffect(() => {
-        const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
         window.addEventListener('keydown', handleEsc);
         return () => window.removeEventListener('keydown', handleEsc);
     }, [onClose]);
 
     return (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
-            <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors">
-                <X size={24} />
+        <div
+            className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn"
+            onClick={onClose}>
+            <button onClick={onClose}
+                    className="absolute top-6 right-6 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors">
+                <X size={24}/>
             </button>
-            <img src={imageUrl} alt="Full size" className="max-w-full max-h-[90vh] rounded-lg shadow-2xl animate-zoomIn" onClick={e => e.stopPropagation()} />
+            <img src={imageUrl} alt="Full size" className="max-w-full max-h-[90vh] rounded-lg shadow-2xl animate-zoomIn"
+                 onClick={e => e.stopPropagation()}/>
         </div>
     );
 };
 // ----------------------------------
 
 export const ProfilePage: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    const {id} = useParams<{ id: string }>();
     const profileId = String(id);
 
     const [accentColor, setAccentColor] = useState(() => localStorage.getItem('site_accent_color') || 'purple');
@@ -51,10 +55,13 @@ export const ProfilePage: React.FC = () => {
 
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-    // Стейт для перемикання вкладок
+
     const [activeTab, setActiveTab] = useState<'Posts' | 'Media' | 'Likes'>('Posts');
 
-    // Модалки
+
+    const [friendRequestSent, setFriendRequestSent] = useState(false);
+
+
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [postToDeleteId, setPostToDeleteId] = useState<number | null>(null);
     const [isDeletingPost, setIsDeletingPost] = useState(false);
@@ -139,7 +146,7 @@ export const ProfilePage: React.FC = () => {
                         if (!userData) {
                             try {
                                 const allRes = await fetch("http://localhost:8081/api/v1/users/all", {
-                                    headers: { "Authorization": `Bearer ${token}` }
+                                    headers: {"Authorization": `Bearer ${token}`}
                                 });
                                 if (allRes.ok) {
                                     const allData = await allRes.json();
@@ -175,11 +182,11 @@ export const ProfilePage: React.FC = () => {
 
                     // --- НОВЕ: Завантажуємо пости, які лайкнув саме ВЛАСНИК ПРОФІЛЮ ---
                     try {
-                        const headers: HeadersInit = { "Content-Type": "application/json" };
+                        const headers: HeadersInit = {"Content-Type": "application/json"};
                         if (token && token !== "undefined") headers["Authorization"] = `Bearer ${token}`;
 
                         // Запит на бекенд: отримати лайки конкретного юзера (userData.id)
-                        const likesRes = await fetch(`http://localhost:8081/api/v1/users/${userData.id}/likedPosts`, { headers });
+                        const likesRes = await fetch(`http://localhost:8081/api/v1/users/${userData.id}/likedPosts`, {headers});
 
                         if (likesRes.ok) {
                             const likedData = await likesRes.json();
@@ -217,6 +224,57 @@ export const ProfilePage: React.FC = () => {
 
     const isOwner = currentUserId !== null && user !== null && String(user.id) === String(currentUserId);
 
+
+    const handleSendFriendRequest = async () => {
+        try {
+            const token = localStorage.getItem("access_token");
+            if (!token || token === "undefined") {
+                alert("Please log in to add friends.");
+                return;
+            }
+
+            const res = await fetch(`http://localhost:8081/api/v1/users/me/friends/${user.id}`, {
+                method: 'POST',
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (res.ok) {
+                setFriendRequestSent(true);
+            } else {
+                console.error("Failed to send friend request");
+            }
+        } catch (e) {
+            console.error("Error sending friend request:", e);
+        }
+    };
+
+    const handleCancelFriendRequest = async () => {
+        try {
+            const token = localStorage.getItem("access_token");
+            if (!token || token === "undefined") {
+                alert("Please log in to cancel request.");
+                return;
+            }
+
+            const res = await fetch(`http://localhost:8081/api/v1/users/me/friends/${user.id}/cancel-request`, {
+                method: 'POST',
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (res.ok) {
+                setFriendRequestSent(false);
+            } else {
+                console.error("Failed to cancel friend request");
+            }
+        } catch (e) {
+            console.error("Error cancelling friend request:", e);
+        }
+    };
+
     // === ЛОГІКА ПОСТІВ ===
 
     // 1. Окремий обробник для лайків
@@ -240,12 +298,15 @@ export const ProfilePage: React.FC = () => {
                 next.delete(postId);
                 return next;
             });
-            setPosts(posts.map(p => p.id === postId ? { ...p, likes: Math.max(0, p.likes - 1) } : p));
-            setProfileLikedPosts(profileLikedPosts.map(p => p.id === postId ? { ...p, likes: Math.max(0, p.likes - 1) } : p));
+            setPosts(posts.map(p => p.id === postId ? {...p, likes: Math.max(0, p.likes - 1)} : p));
+            setProfileLikedPosts(profileLikedPosts.map(p => p.id === postId ? {
+                ...p,
+                likes: Math.max(0, p.likes - 1)
+            } : p));
         } else {
             setLikedPosts(prev => new Set(prev).add(postId));
-            setPosts(posts.map(p => p.id === postId ? { ...p, likes: p.likes + 1 } : p));
-            setProfileLikedPosts(profileLikedPosts.map(p => p.id === postId ? { ...p, likes: p.likes + 1 } : p));
+            setPosts(posts.map(p => p.id === postId ? {...p, likes: p.likes + 1} : p));
+            setProfileLikedPosts(profileLikedPosts.map(p => p.id === postId ? {...p, likes: p.likes + 1} : p));
         }
 
         try {
@@ -274,10 +335,18 @@ export const ProfilePage: React.FC = () => {
                 next.delete(postId);
                 return next;
             });
-            try { await removeBookmark(postId); } catch (err) { console.error(err); }
+            try {
+                await removeBookmark(postId);
+            } catch (err) {
+                console.error(err);
+            }
         } else {
             setSavedPosts(prev => new Set(prev).add(postId));
-            try { await addBookmark(postId); } catch (err) { console.error(err); }
+            try {
+                await addBookmark(postId);
+            } catch (err) {
+                console.error(err);
+            }
         }
     };
 
@@ -311,11 +380,13 @@ export const ProfilePage: React.FC = () => {
     };
 
     if (isLoading) {
-        return <div className="min-h-[50vh] flex items-center justify-center"><Loader2 className={`animate-spin text-${accentColor}-600`} size={40} /></div>;
+        return <div className="min-h-[50vh] flex items-center justify-center"><Loader2
+            className={`animate-spin text-${accentColor}-600`} size={40}/></div>;
     }
 
     if (!user) {
-        return <div className="text-center py-20"><h2 className="text-2xl font-bold dark:text-white">User not found</h2></div>;
+        return <div className="text-center py-20"><h2 className="text-2xl font-bold dark:text-white">User not found</h2>
+        </div>;
     }
 
     const avatarLetter = user.username ? user.username.substring(0, 1).toUpperCase() : '?';
@@ -326,11 +397,14 @@ export const ProfilePage: React.FC = () => {
     return (
         <div className="max-w-7xl mx-auto pb-10">
             {/* Banner */}
-            <div className={`h-48 md:h-64 rounded-b-3xl md:rounded-3xl bg-gradient-to-r from-${accentColor}-500 to-${accentColor}-700 relative shadow-lg mb-20`}>
+            <div
+                className={`h-48 md:h-64 rounded-b-3xl md:rounded-3xl bg-gradient-to-r from-${accentColor}-500 to-${accentColor}-700 relative shadow-lg mb-20`}>
                 <div className="absolute top-4 right-4 flex gap-2">
                     {isOwner && (
-                        <button className="bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl p-2 text-white transition-colors" title="Change Banner">
-                            <Camera size={20} />
+                        <button
+                            className="bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl p-2 text-white transition-colors"
+                            title="Change Banner">
+                            <Camera size={20}/>
                         </button>
                     )}
                 </div>
@@ -338,16 +412,18 @@ export const ProfilePage: React.FC = () => {
                 {/* Avatar */}
                 <div className="absolute -bottom-16 left-8 flex items-end gap-6">
                     <div className="relative group">
-                        <div className={`w-32 h-32 rounded-2xl bg-white dark:bg-gray-800 border-4 border-white dark:border-gray-900 flex items-center justify-center text-5xl font-bold text-${accentColor}-600 shadow-xl overflow-hidden`}>
+                        <div
+                            className={`w-32 h-32 rounded-2xl bg-white dark:bg-gray-800 border-4 border-white dark:border-gray-900 flex items-center justify-center text-5xl font-bold text-${accentColor}-600 shadow-xl overflow-hidden`}>
                             {user.avatarUrl ? (
-                                <img src={user.avatarUrl} alt={user.username} className="w-full h-full object-cover" />
+                                <img src={user.avatarUrl} alt={user.username} className="w-full h-full object-cover"/>
                             ) : (
                                 avatarLetter
                             )}
                         </div>
                         {isOwner && (
-                            <button className="absolute bottom-2 right-2 p-2 bg-gray-900/70 hover:bg-gray-900 text-white rounded-lg backdrop-blur-sm transition-colors opacity-0 group-hover:opacity-100">
-                                <Camera size={16} />
+                            <button
+                                className="absolute bottom-2 right-2 p-2 bg-gray-900/70 hover:bg-gray-900 text-white rounded-lg backdrop-blur-sm transition-colors opacity-0 group-hover:opacity-100">
+                                <Camera size={16}/>
                             </button>
                         )}
                     </div>
@@ -360,16 +436,29 @@ export const ProfilePage: React.FC = () => {
                             to="/settings"
                             className={`px-5 py-2.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all border border-gray-200 dark:border-gray-700`}
                         >
-                            <Edit3 size={18} /> Edit Profile
+                            <Edit3 size={18}/> Edit Profile
                         </Link>
                     ) : (
                         <>
-                            <button className={`px-5 py-2.5 bg-${accentColor}-600 hover:bg-${accentColor}-700 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-${accentColor}-500/30 transition-all`}>
-                                <MessageSquare size={18} /> Message
+                            <button
+                                className={`px-5 py-2.5 bg-${accentColor}-600 hover:bg-${accentColor}-700 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-${accentColor}-500/30 transition-all`}>
+                                <MessageSquare size={18}/> Message
                             </button>
-                            <button className="px-5 py-2.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all border border-gray-200 dark:border-gray-700">
-                                <Users size={18} /> Follow
-                            </button>
+                            {friendRequestSent ? (
+                                <button
+                                    onClick={handleCancelFriendRequest}
+                                    className={`px-5 py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 border border-gray-200 dark:border-gray-700 hover:border-red-200 dark:hover:border-red-800 rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all`}
+                                >
+                                    <X size={18}/> Cancel Request
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleSendFriendRequest}
+                                    className={`px-5 py-2.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all border border-gray-200 dark:border-gray-700`}
+                                >
+                                    <Users size={18}/> Add Friend
+                                </button>
+                            )}
                         </>
                     )}
                 </div>
@@ -390,32 +479,37 @@ export const ProfilePage: React.FC = () => {
                         )}
                     </div>
 
-                    <div className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-6 rounded-2xl shadow-sm">
+                    <div
+                        className="bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 p-6 rounded-2xl shadow-sm">
                         <h3 className="font-bold text-lg mb-4 text-gray-900 dark:text-white">About</h3>
                         <div className="space-y-4 text-sm">
                             {user.email && (
                                 <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                                    <Mail size={18} className={`text-${accentColor}-500`} />
+                                    <Mail size={18} className={`text-${accentColor}-500`}/>
                                     <span>{user.email}</span>
                                 </div>
                             )}
                             {user.location && (
                                 <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                                    <MapPin size={18} className={`text-${accentColor}-500`} />
+                                    <MapPin size={18} className={`text-${accentColor}-500`}/>
                                     <span>{user.location}</span>
                                 </div>
                             )}
                             {user.website && (
                                 <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                                    <LinkIcon size={18} className={`text-${accentColor}-500`} />
-                                    <a href={user.website} target="_blank" rel="noopener noreferrer" className={`hover:text-${accentColor}-500 transition-colors`}>
+                                    <LinkIcon size={18} className={`text-${accentColor}-500`}/>
+                                    <a href={user.website} target="_blank" rel="noopener noreferrer"
+                                       className={`hover:text-${accentColor}-500 transition-colors`}>
                                         {user.website.replace(/^https?:\/\//, '')}
                                     </a>
                                 </div>
                             )}
                             <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
-                                <Calendar size={18} className={`text-${accentColor}-500`} />
-                                <span>Joined {new Date(user.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                                <Calendar size={18} className={`text-${accentColor}-500`}/>
+                                <span>Joined {new Date(user.createdAt || Date.now()).toLocaleDateString('en-US', {
+                                    month: 'long',
+                                    year: 'numeric'
+                                })}</span>
                             </div>
                         </div>
                     </div>
@@ -424,7 +518,8 @@ export const ProfilePage: React.FC = () => {
                 {/* Right Column (Posts & Activity) */}
                 <div className="lg:col-span-2 space-y-6">
                     {/* Tabs */}
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar border-b border-gray-200 dark:border-gray-800 pb-px">
+                    <div
+                        className="flex gap-2 overflow-x-auto no-scrollbar border-b border-gray-200 dark:border-gray-800 pb-px">
                         {(['Posts', 'Media', 'Likes'] as const).map((tab) => (
                             <button
                                 key={tab}
@@ -446,8 +541,9 @@ export const ProfilePage: React.FC = () => {
                     {activeTab === 'Posts' && (
                         <div className="space-y-6 animate-fadeIn">
                             {posts.length === 0 ? (
-                                <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/20 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
-                                    <MessageSquare size={48} className="mx-auto text-gray-400 mb-3 opacity-50" />
+                                <div
+                                    className="text-center py-12 bg-gray-50 dark:bg-gray-800/20 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
+                                    <MessageSquare size={48} className="mx-auto text-gray-400 mb-3 opacity-50"/>
                                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">No posts yet</h3>
                                     <p className="text-gray-500">This user hasn't posted anything.</p>
                                 </div>
@@ -476,8 +572,9 @@ export const ProfilePage: React.FC = () => {
                     {activeTab === 'Media' && (
                         <div className="space-y-6 animate-fadeIn">
                             {mediaPosts.length === 0 ? (
-                                <div className="text-center py-16 bg-gray-50 dark:bg-gray-800/20 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
-                                    <ImageIcon size={48} className="mx-auto text-gray-400 mb-4 opacity-50" />
+                                <div
+                                    className="text-center py-16 bg-gray-50 dark:bg-gray-800/20 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
+                                    <ImageIcon size={48} className="mx-auto text-gray-400 mb-4 opacity-50"/>
                                     <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Media</h3>
                                     <p className="text-gray-500">This user hasn't posted any photos yet.</p>
                                 </div>
@@ -506,9 +603,11 @@ export const ProfilePage: React.FC = () => {
                     {activeTab === 'Likes' && (
                         <div className="space-y-6 animate-fadeIn">
                             {profileLikedPosts.length === 0 ? (
-                                <div className="text-center py-16 bg-gray-50 dark:bg-gray-800/20 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
-                                    <Heart size={48} className="mx-auto text-gray-400 mb-4 opacity-50" />
-                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Liked Posts</h3>
+                                <div
+                                    className="text-center py-16 bg-gray-50 dark:bg-gray-800/20 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
+                                    <Heart size={48} className="mx-auto text-gray-400 mb-4 opacity-50"/>
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Liked
+                                        Posts</h3>
                                     <p className="text-gray-500">Posts liked by this user will be displayed here.</p>
                                 </div>
                             ) : (
@@ -536,26 +635,36 @@ export const ProfilePage: React.FC = () => {
 
             {/* Модалка перегляду фото */}
             {selectedImage && (
-                <ImageModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />
+                <ImageModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)}/>
             )}
 
             {/* Модалка підтвердження видалення поста */}
             {postToDeleteId !== null && (
-                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn" onClick={() => setPostToDeleteId(null)}>
-                    <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-zoomIn relative" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => setPostToDeleteId(null)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-                            <X size={24} />
+                <div
+                    className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fadeIn"
+                    onClick={() => setPostToDeleteId(null)}>
+                    <div
+                        className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-zoomIn relative"
+                        onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setPostToDeleteId(null)}
+                                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+                            <X size={24}/>
                         </button>
                         <div className="flex flex-col items-center text-center mt-4">
-                            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mb-4">
-                                <AlertTriangle size={32} />
+                            <div
+                                className="w-16 h-16 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-full flex items-center justify-center mb-4">
+                                <AlertTriangle size={32}/>
                             </div>
                             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Delete Post?</h3>
-                            <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">Are you sure you want to delete this post? This action cannot be undone.</p>
+                            <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">Are you sure you want
+                                to delete this post? This action cannot be undone.</p>
                             <div className="flex gap-3 w-full">
-                                <button onClick={() => setPostToDeleteId(null)} className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-white rounded-xl font-medium transition-colors">Cancel</button>
-                                <button onClick={confirmDeletePost} disabled={isDeletingPost} className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium shadow-lg flex justify-center items-center gap-2 disabled:opacity-50">
-                                    {isDeletingPost ? <Loader2 size={18} className="animate-spin" /> : "Delete"}
+                                <button onClick={() => setPostToDeleteId(null)}
+                                        className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-900 dark:text-white rounded-xl font-medium transition-colors">Cancel
+                                </button>
+                                <button onClick={confirmDeletePost} disabled={isDeletingPost}
+                                        className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-medium shadow-lg flex justify-center items-center gap-2 disabled:opacity-50">
+                                    {isDeletingPost ? <Loader2 size={18} className="animate-spin"/> : "Delete"}
                                 </button>
                             </div>
                         </div>

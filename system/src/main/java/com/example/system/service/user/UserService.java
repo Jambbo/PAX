@@ -1,5 +1,6 @@
 package com.example.system.service.user;
 
+import com.example.system.domain.model.FriendRequest;
 import com.example.system.domain.model.Post;
 import com.example.system.domain.model.User;
 import com.example.system.domain.model.UserStatus;
@@ -39,4 +40,24 @@ public interface UserService {
     List<User> search(String query, String userId);
 
     List<Post> getLikedPostsByUserId(String userId);
+
+    User addFriend(String userId, String friendId);
+
+    User removeFriend(String userId, String friendId);
+
+    List<User> getFriends(String userId);
+
+    boolean isFriend(String userId, String friendId);
+
+    void sendFriendRequest(String senderId, String receiverId);
+
+    void acceptFriendRequest(String userId, Long requestId);
+
+    void declineFriendRequest(String userId, Long requestId);
+
+    void cancelFriendRequest(String senderId, Long requestId);
+
+    void cancelFriendRequestByReceiverId(String senderId, String receiverId);
+
+    List<FriendRequest> getPendingFriendRequests(String userId);
 }
