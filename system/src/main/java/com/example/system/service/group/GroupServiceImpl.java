@@ -93,24 +93,19 @@ public class GroupServiceImpl implements GroupService {
     @Override
     @Transactional
     public void joinUser(Long groupId, String userId) {
-        // 1. Шукаємо групу
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found with id=" + groupId));
 
-        // 2. Шукаємо користувача
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id=" + userId));
 
-        // 3. Перевіряємо, чи користувач вже є у групі (щоб не додавати двічі)
         if (group.getMembers().contains(user)) {
-            return; // Або кинути помилку "Already a member"
+            return;
         }
 
-        // 4. Додаємо в список та оновлюємо лічильник
         group.getMembers().add(user);
         group.setMemberCount(group.getMemberCount() + 1);
 
-        // 5. Зберігаємо зміни
         groupRepository.save(group);
     }
 

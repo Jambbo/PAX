@@ -22,4 +22,6 @@ public interface UserRepository extends JpaRepository<User, String> {
     Page<User> findLatestUsers(Pageable pageable);
 
     List<User> findTop10ByUsernameStartingWithIgnoreCaseAndIdNotOrderByUsernameAsc(String username, String userId);
+
+    Object findByEmail(String email);
 }
