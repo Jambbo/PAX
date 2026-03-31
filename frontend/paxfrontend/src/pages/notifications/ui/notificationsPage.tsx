@@ -22,30 +22,8 @@ import {
     markAllNotificationsRead,
     deleteNotificationThunk
 } from '../../../features/Notifications/notificationsSlice';
-type NotificationType = 'mention' | 'like' | 'follow' | 'reply' | 'system';
+type NotificationType = 'mention' | 'like' | 'follow' | 'reply' | 'system' | 'friend_request';
 
-interface NotificationItem {
-    id: number;
-    type: NotificationType;
-    title: string;
-    message: string;
-    time: string;
-    isRead: boolean;
-    actor?: {
-        name: string;
-        avatar: string;
-    };
-    context?: {
-        label: string;
-        color: string;
-    };
-    meta?: {
-        postTitle?: string;
-        count?: number;
-    };
-}
-
-// Адаптував кольори для світлої/темної теми
 const typeMeta: Record<
     NotificationType,
     {
@@ -76,6 +54,13 @@ const typeMeta: Record<
         pill: { bg: 'bg-green-100 dark:bg-green-900/20', text: 'text-green-700 dark:text-green-300', border: 'border-green-200 dark:border-green-500/30' },
         cardBorder: 'border-green-200 dark:border-green-500/25',
         iconBg: 'from-green-600 to-green-700'
+    },
+    friend_request: {
+        label: 'Friend Requests',
+        icon: <UserPlus size={18} className="text-white" />,
+        pill: { bg: 'bg-indigo-100 dark:bg-indigo-900/20', text: 'text-indigo-700 dark:text-indigo-300', border: 'border-indigo-200 dark:border-indigo-500/30' },
+        cardBorder: 'border-indigo-200 dark:border-indigo-500/25',
+        iconBg: 'from-indigo-600 to-indigo-700'
     },
     reply: {
         label: 'Replies',
@@ -130,6 +115,7 @@ export const NotificationsPage: React.FC = () => {
              else if (n.type === 'NEW_COMMENT' || n.type === 'NEW_MESSAGE') mappedType = 'reply';
              else if (n.type === 'GROUP_INVITE') mappedType = 'mention';
              else if (n.type === 'FOLLOW') mappedType = 'follow';
+             else if (n.type === 'FRIEND_REQUEST') mappedType = 'friend_request';
 
             return {
                 id: n.id,
@@ -270,7 +256,7 @@ export const NotificationsPage: React.FC = () => {
                     <div className="flex flex-col lg:flex-row gap-4">
                         {/* Filter Tabs */}
                         <div className="flex flex-wrap gap-2">
-                            {(['all', 'mention', 'reply', 'like', 'follow', 'system'] as const).map(key => {
+                            {(['all', 'mention', 'reply', 'like', 'follow', 'friend_request', 'system'] as const).map(key => {
                                 const isActive = activeFilter === key;
                                 const label = key === 'all' ? 'All' : typeMeta[key].label;
                                 const pill =

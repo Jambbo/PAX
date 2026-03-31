@@ -6,5 +6,6 @@ public enum NotificationType {
     NEW_COMMENT,
     NEW_MESSAGE,
     GROUP_INVITE,
-    FOLLOW
+    FOLLOW,
+    FRIEND_REQUEST
 }

@@ -61,7 +61,11 @@ export const useNotificationSocket = () => {
                         if (stored) toastedIds = JSON.parse(stored);
                     } catch(e) {}
 
-                    if (!isAlreadyInStore && !toastedIds.includes(incomingNotification.id)) {
+                    // Don't toast if the notification is more than 30 seconds old (e.g., from initial sync on a new device)
+                    const notificationTime = new Date(incomingNotification.createdAt).getTime();
+                    const isOld = (Date.now() - notificationTime) > 30000;
+
+                    if (!isAlreadyInStore && !isOld && !toastedIds.includes(incomingNotification.id)) {
                         toastedIds.push(incomingNotification.id);
                         if (toastedIds.length > 100) toastedIds.shift(); // Keep limit
                         localStorage.setItem('toasted_notifications', JSON.stringify(toastedIds));
@@ -76,6 +80,7 @@ export const useNotificationSocket = () => {
                           case 'NEW_MESSAGE': text = `${senderName} sent you a message.`; break;
                           case 'GROUP_INVITE': text = `${senderName} invited you to a group.`; break;
                           case 'FOLLOW': text = `${senderName} started following you.`; break;
+                          case 'FRIEND_REQUEST': text = `${senderName} sent you a friend request.`; break;
                         }
                         
                         toast.success(text, {
