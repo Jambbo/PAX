@@ -15,7 +15,13 @@ import {
     Settings,
     Clock
 } from 'lucide-react';
-
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState, AppDispatch } from '../../../app/layout/store';
+import {
+    markNotificationRead,
+    markAllNotificationsRead,
+    deleteNotificationThunk
+} from '../../../features/Notifications/notificationsSlice';
 type NotificationType = 'mention' | 'like' | 'follow' | 'reply' | 'system';
 
 interface NotificationItem {
@@ -88,6 +94,10 @@ const typeMeta: Record<
 };
 
 export const NotificationsPage: React.FC = () => {
+    const dispatch = useDispatch<AppDispatch>();
+    const notificationsRaw = useSelector((state: RootState) => state.notifications.items);
+    const unreadCount = useSelector((state: RootState) => state.notifications.unreadCount);
+
     // --- ЛОГІКА КОЛЬОРІВ ---
     const [accentColor, setAccentColor] = useState(() => {
         return localStorage.getItem('site_accent_color') || 'purple';
@@ -112,71 +122,28 @@ export const NotificationsPage: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [showUnreadOnly, setShowUnreadOnly] = useState(false);
 
-    const [notifications, setNotifications] = useState<NotificationItem[]>([
-        {
-            id: 1,
-            type: 'mention',
-            title: 'You were mentioned in a discussion',
-            message: 'Sarah J. mentioned you: “What do you think about memoization vs. virtualization here?”',
-            time: '12 min ago',
-            isRead: false,
-            actor: { name: 'Sarah J.', avatar: 'SJ' },
-            context: { label: 'Tech Enthusiasts', color: 'from-blue-500 to-cyan-600' },
-            meta: { postTitle: 'React performance optimization patterns' }
-        },
-        {
-            id: 2,
-            type: 'reply',
-            title: 'New reply to your comment',
-            message: 'Mike R. replied: “Good point — also worth profiling with the React DevTools.”',
-            time: '1 hour ago',
-            isRead: false,
-            actor: { name: 'Mike R.', avatar: 'MR' },
-            context: { label: 'Career Growth', color: 'from-green-500 to-emerald-600' },
-            meta: { postTitle: 'My journey to full-stack' }
-        },
-        {
-            id: 3,
-            type: 'like',
-            title: 'Your post is getting traction',
-            message: 'Alex K. and 23 others liked your post.',
-            time: '3 hours ago',
-            isRead: true,
-            actor: { name: 'Alex K.', avatar: 'AK' },
-            context: { label: 'Tech Enthusiasts', color: 'from-blue-500 to-cyan-600' },
-            meta: { count: 24, postTitle: 'Top 10 VS Code extensions' }
-        },
-        {
-            id: 4,
-            type: 'follow',
-            title: 'New follower',
-            message: 'Emily S. started following you.',
-            time: 'Yesterday',
-            isRead: true,
-            actor: { name: 'Emily S.', avatar: 'ES' }
-        },
-        {
-            id: 5,
-            type: 'system',
-            title: 'Security notice',
-            message: 'A new sign-in was detected from a Windows device. If this wasn’t you, secure your account.',
-            time: '2 days ago',
-            isRead: false
-        },
-        {
-            id: 6,
-            type: 'reply',
-            title: 'Reply in your saved thread',
-            message: 'Admin posted an update to the Dark Mode 2.0 thread.',
-            time: '1 week ago',
-            isRead: true,
-            actor: { name: 'Admin', avatar: 'AD' },
-            context: { label: 'Announcements', color: 'from-purple-500 to-pink-600' },
-            meta: { postTitle: 'Dark Mode 2.0 - improvements' }
-        }
-    ]);
+    // Map backend DTO to local NotificationItem logic
+    const notifications = useMemo(() => {
+        return notificationsRaw.map(n => {
+            let mappedType: NotificationType = 'system';
+             if (n.type === 'LIKE_POST' || n.type === 'LIKE_COMMENT') mappedType = 'like';
+             else if (n.type === 'NEW_COMMENT' || n.type === 'NEW_MESSAGE') mappedType = 'reply';
+             else if (n.type === 'GROUP_INVITE') mappedType = 'mention';
+             else if (n.type === 'FOLLOW') mappedType = 'follow';
 
-    const unreadCount = useMemo(() => notifications.filter(n => !n.isRead).length, [notifications]);
+            return {
+                id: n.id,
+                type: mappedType,
+                title: n.type.replace('_', ' '),
+                message: '',
+                time: new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(n.createdAt)),
+                isRead: n.status === 'READ',
+                actor: n.sender ? { name: n.sender.username, avatar: n.sender.username.substring(0,2).toUpperCase() } : undefined,
+                context: undefined,
+                meta: undefined
+            };
+        });
+    }, [notificationsRaw]);
 
     const filtered = useMemo(() => {
         const q = searchQuery.trim().toLowerCase();
@@ -201,15 +168,18 @@ export const NotificationsPage: React.FC = () => {
     }, [notifications, activeFilter, showUnreadOnly, searchQuery]);
 
     const markAllAsRead = () => {
-        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        dispatch(markAllNotificationsRead());
     };
 
     const toggleRead = (id: number) => {
-        setNotifications(prev => prev.map(n => (n.id === id ? { ...n, isRead: !n.isRead } : n)));
+        const item = notifications.find(n => n.id === id);
+        if (item && !item.isRead) {
+            dispatch(markNotificationRead(id));
+        }
     };
 
     const removeNotification = (id: number) => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
+        dispatch(deleteNotificationThunk(id));
     };
 
     return (
